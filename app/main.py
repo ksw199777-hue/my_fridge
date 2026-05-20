@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 from datetime import date, timedelta
 from app.database import get_db, create_tables, Ingredient, ShoppingItem
-from app.ai import recognize_ingredients, recommend_recipes, recognize_from_screenshot, recognize_expiry_date
+from app.ai import recognize_ingredients, recommend_recipes, recognize_from_screenshot, recognize_expiry_date, recognize_receipt
 from pydantic import BaseModel
 
 load_dotenv()
@@ -308,3 +308,33 @@ async def recognize_expiry(file: UploadFile = File(...)):
         return {"message": "유통기한을 찾을 수 없어요", "expiry_date": None}
     
     return {"expiry_date": result["expiry_date"]}
+
+@app.post("/recognize/receipt")
+async def recognize_receipt_api(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    image_bytes = await file.read()
+    ingredients = recognize_receipt(image_bytes)
+    
+    saved = []
+    for item in ingredients:
+        expiry_days = item.get("expiry_days") or 7  # None이면 기본 7일
+        ingredient = Ingredient(
+            name=item["name"],
+            registered_date=date.today(),
+            expiry_date=date.today() + timedelta(days=expiry_days),
+            price=item.get("price", 0),
+            location="냉장"
+        )
+        db.add(ingredient)
+        db.commit()
+        db.refresh(ingredient)
+        saved.append({
+            "id": ingredient.id,
+            "name": ingredient.name,
+            "quantity": item.get("quantity", 1),
+            "registered_date": ingredient.registered_date,
+            "expiry_date": ingredient.expiry_date,
+            "price": ingredient.price,
+            "location": ingredient.location
+        })
+    
+    return {"ingredients": saved}
