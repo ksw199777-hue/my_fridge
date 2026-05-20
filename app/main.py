@@ -2,7 +2,7 @@ from fastapi import FastAPI, UploadFile, File, Depends
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 from datetime import date, timedelta
-from app.database import get_db, create_tables, Ingredient
+from app.database import get_db, create_tables, Ingredient, ShoppingItem
 from app.ai import recognize_ingredients, recommend_recipes, recognize_from_screenshot
 from pydantic import BaseModel
 

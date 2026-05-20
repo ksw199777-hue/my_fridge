@@ -18,6 +18,15 @@ class Ingredient(Base):
     expiry_date = Column(Date)
     price = Column(Integer, default=0)
     location = Column(String, default="냉장")
+    
+class ShoppingItem(Base):
+    __tablename__ = "shopping_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    quantity = Column(Integer, default=1)
+    is_purchased = Column(Integer, default=0)  # 0: 미구매, 1: 구매완료
+    created_date = Column(Date, default=date.today)
 
 def get_db():
     db = SessionLocal()
