@@ -16,6 +16,8 @@ class Ingredient(Base):
     name = Column(String, index=True)
     registered_date = Column(Date, default=date.today)
     expiry_date = Column(Date)
+    price = Column(Integer, default=0)
+    location = Column(String, default="냉장")
 
 def get_db():
     db = SessionLocal()
