@@ -2,9 +2,8 @@ from fastapi import FastAPI, UploadFile, File, Depends
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 from datetime import date, timedelta
-from app.ai import recognize_ingredients
 from app.database import get_db, create_tables, Ingredient
-from app.ai import recognize_ingredients, recommend_recipes
+from app.ai import recognize_ingredients, recommend_recipes, recognize_from_screenshot
 
 load_dotenv()
 
@@ -110,3 +109,28 @@ def delete_ingredient(ingredient_id: int, db: Session = Depends(get_db)):
     db.commit()
     
     return {"message": f"{ingredient.name} 삭제됐어요!"}
+
+@app.post("/recognize/screenshot")
+async def recognize_screenshot(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    image_bytes = await file.read()
+    ingredients = recognize_from_screenshot(image_bytes)
+    
+    saved = []
+    for item in ingredients:
+        ingredient = Ingredient(
+            name=item["name"],
+            registered_date=date.today(),
+            expiry_date=date.today() + timedelta(days=item["expiry_days"])
+        )
+        db.add(ingredient)
+        db.commit()
+        db.refresh(ingredient)
+        saved.append({
+            "id": ingredient.id,
+            "name": ingredient.name,
+            "quantity": item.get("quantity", 1),
+            "registered_date": ingredient.registered_date,
+            "expiry_date": ingredient.expiry_date
+        })
+    
+    return {"ingredients": saved}

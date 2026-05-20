@@ -89,3 +89,49 @@ def recommend_recipes(ingredients: list) -> list:
         result = json.loads(json_match.group())
         return result["recipes"]
     return []
+
+def recognize_from_screenshot(image_bytes: bytes) -> list:
+    image_base64 = base64.standard_b64encode(image_bytes).decode("utf-8")
+    
+    message = client.messages.create(
+        model="claude-opus-4-5",
+        max_tokens=1024,
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/jpeg",
+                            "data": image_base64,
+                        },
+                    },
+                    {
+                        "type": "text",
+                        "text": """이것은 온라인 쇼핑몰 주문 내역 스크린샷입니다.
+주문한 식재료 목록을 찾아주세요.
+
+다음 JSON 형식으로만 답해주세요:
+{
+    "ingredients": [
+        {"name": "재료명", "quantity": 수량, "expiry_days": 유통기한(일수)}
+    ]
+}
+식재료가 아닌 상품은 제외해주세요.
+유통기한은 일반적인 보관 기간으로 추정해주세요."""
+                    }
+                ],
+            }
+        ],
+    )
+    
+    import json
+    import re
+    response_text = message.content[0].text
+    json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+    if json_match:
+        result = json.loads(json_match.group())
+        return result["ingredients"]
+    return []
