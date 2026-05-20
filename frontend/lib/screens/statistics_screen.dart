@@ -60,6 +60,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // 이번달 가계부
                   const Text('💰 이번달 식재료비',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
@@ -105,6 +106,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
+
+                  // 전체 통계
                   const Text('📦 전체 통계',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
@@ -152,6 +155,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
+
+                  // 유통기한 임박 재료
                   if ((_statistics['expiring_soon']?['count'] ?? 0) > 0) ...[
                     const Text('⚠️ 소비기한 임박',
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),

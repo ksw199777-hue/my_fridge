@@ -16,16 +16,15 @@ class ApiService {
   }
 
   // 재료 인식 (사진)
-  static Future<List<dynamic>> recognizeIngredient(Uint8List imageBytes) async {
+  static Future<Map<String, dynamic>> recognizeIngredientWithMessage(Uint8List imageBytes) async {
     final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/recognize'));
     request.files.add(http.MultipartFile.fromBytes('file', imageBytes, filename: 'image.jpg'));
     final response = await request.send();
     final body = await response.stream.bytesToString();
     if (response.statusCode == 200) {
-      final data = jsonDecode(body);
-      return data['ingredients'];
+      return jsonDecode(body);
     }
-    return [];
+    return {'ingredients': [], 'message': null};
   }
 
   // 재료 삭제
@@ -54,13 +53,20 @@ class ApiService {
   }
 
   // 수동 재료 등록
-  static Future<bool> createIngredient(String name, int expiryDays, int price, String location) async {
+  static Future<bool> createIngredient(
+    String name,
+    int? expiryDays,
+    int consumeDays,
+    int price,
+    String location,
+  ) async {
     final response = await http.post(
       Uri.parse('$baseUrl/ingredients'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'name': name,
         'expiry_days': expiryDays,
+        'consume_days': consumeDays,
         'price': price,
         'location': location,
       }),
@@ -84,5 +90,61 @@ class ApiService {
       return jsonDecode(utf8.decode(response.bodyBytes));
     }
     return {};
+  }
+
+  // 쇼핑리스트 조회
+  static Future<List<dynamic>> getShoppingList() async {
+    final response = await http.get(Uri.parse('$baseUrl/shopping'));
+    if (response.statusCode == 200) {
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      return data['shopping_list'];
+    }
+    return [];
+  }
+
+  // 쇼핑 아이템 추가
+  static Future<bool> addShoppingItem(String name, int quantity) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/shopping'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'name': name, 'quantity': quantity}),
+    );
+    return response.statusCode == 200;
+  }
+
+  // 구매 완료
+  static Future<bool> markPurchased(int id) async {
+    final response = await http.put(Uri.parse('$baseUrl/shopping/$id/purchased'));
+    return response.statusCode == 200;
+  }
+
+  // 쇼핑 아이템 삭제
+  static Future<bool> deleteShoppingItem(int id) async {
+    final response = await http.delete(Uri.parse('$baseUrl/shopping/$id'));
+    return response.statusCode == 200;
+  }
+
+  // 영수증 인식
+  static Future<Map<String, dynamic>> recognizeReceiptWithMessage(Uint8List imageBytes) async {
+    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/recognize/receipt'));
+    request.files.add(http.MultipartFile.fromBytes('file', imageBytes, filename: 'image.jpg'));
+    final response = await request.send();
+    final body = await response.stream.bytesToString();
+    if (response.statusCode == 200) {
+      return jsonDecode(body);
+    }
+    return {'ingredients': [], 'message': null};
+  }
+
+  // 스크린샷 인식
+  static Future<Map<String, dynamic>> recognizeScreenshotWithMessage(Uint8List imageBytes) async {
+    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/recognize/screenshot'));
+    request.files.add(http.MultipartFile.fromBytes('file', imageBytes, filename: 'image.jpg'));
+    final response = await request.send();
+    final body = await response.stream.bytesToString();
+    if (response.statusCode == 200) {
+      return jsonDecode(body);
+    }
+    return {'ingredients': [], 'message': null};
   }
 }
