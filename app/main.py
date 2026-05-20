@@ -1,4 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 from datetime import date, timedelta
@@ -9,6 +10,14 @@ from pydantic import BaseModel
 load_dotenv()
 
 app = FastAPI(title="나만의 냉장고 API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.on_event("startup")
 def startup():
@@ -25,10 +34,16 @@ async def recognize(file: UploadFile = File(...), db: Session = Depends(get_db))
     
     saved = []
     for item in ingredients:
+        expiry_days = item.get("expiry_days")
+        consume_days = item.get("consume_days") or 7
+        has_expiry_label = item.get("has_expiry_label", False)
+
         ingredient = Ingredient(
             name=item["name"],
             registered_date=date.today(),
-            expiry_date=date.today() + timedelta(days=item["expiry_days"]),
+            expiry_date=date.today() + timedelta(days=expiry_days) if expiry_days else None,
+            consume_date=date.today() + timedelta(days=consume_days),
+            has_expiry_label=1 if has_expiry_label else 0,
             price=0,
             location="냉장"
         )
@@ -40,11 +55,16 @@ async def recognize(file: UploadFile = File(...), db: Session = Depends(get_db))
             "name": ingredient.name,
             "registered_date": ingredient.registered_date,
             "expiry_date": ingredient.expiry_date,
+            "consume_date": ingredient.consume_date,
+            "has_expiry_label": ingredient.has_expiry_label,
             "price": ingredient.price,
             "location": ingredient.location
         })
     
-    return {"ingredients": saved}
+    return {
+        "ingredients": saved,
+        "message": "유통기한 표시가 없는 재료는 오늘 기준으로 소비기한을 산출했어요! 냉장고 탭에서 수정 가능해요 ✏️"
+    }
 
 @app.post("/recognize/screenshot")
 async def recognize_screenshot(file: UploadFile = File(...), db: Session = Depends(get_db)):
@@ -53,10 +73,13 @@ async def recognize_screenshot(file: UploadFile = File(...), db: Session = Depen
     
     saved = []
     for item in ingredients:
+        consume_days = item.get("consume_days") or 7
         ingredient = Ingredient(
             name=item["name"],
             registered_date=date.today(),
-            expiry_date=date.today() + timedelta(days=item["expiry_days"]),
+            expiry_date=None,
+            consume_date=date.today() + timedelta(days=consume_days),
+            has_expiry_label=0,
             price=item.get("price", 0),
             location="냉장"
         )
@@ -69,11 +92,53 @@ async def recognize_screenshot(file: UploadFile = File(...), db: Session = Depen
             "quantity": item.get("quantity", 1),
             "registered_date": ingredient.registered_date,
             "expiry_date": ingredient.expiry_date,
+            "consume_date": ingredient.consume_date,
+            "has_expiry_label": ingredient.has_expiry_label,
             "price": ingredient.price,
             "location": ingredient.location
         })
     
-    return {"ingredients": saved}
+    return {
+        "ingredients": saved,
+        "message": "유통기한 표시가 없어 오늘을 기준으로 소비기한을 산출했어요! 냉장고 탭에서 수정 가능해요 ✏️"
+    }
+
+@app.post("/recognize/receipt")
+async def recognize_receipt_api(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    image_bytes = await file.read()
+    ingredients = recognize_receipt(image_bytes)
+    
+    saved = []
+    for item in ingredients:
+        consume_days = item.get("consume_days") or 7
+        ingredient = Ingredient(
+            name=item["name"],
+            registered_date=date.today(),
+            expiry_date=None,
+            consume_date=date.today() + timedelta(days=consume_days),
+            has_expiry_label=0,
+            price=item.get("price", 0),
+            location="냉장"
+        )
+        db.add(ingredient)
+        db.commit()
+        db.refresh(ingredient)
+        saved.append({
+            "id": ingredient.id,
+            "name": ingredient.name,
+            "quantity": item.get("quantity", 1),
+            "registered_date": ingredient.registered_date,
+            "expiry_date": ingredient.expiry_date,
+            "consume_date": ingredient.consume_date,
+            "has_expiry_label": ingredient.has_expiry_label,
+            "price": ingredient.price,
+            "location": ingredient.location
+        })
+    
+    return {
+        "ingredients": saved,
+        "message": "유통기한 표시가 없어 오늘을 기준으로 소비기한을 산출했어요! 냉장고 탭에서 수정 가능해요 ✏️"
+    }
 
 @app.get("/ingredients")
 def get_ingredients(db: Session = Depends(get_db)):
@@ -84,9 +149,11 @@ def get_ingredients(db: Session = Depends(get_db)):
             "name": i.name,
             "registered_date": i.registered_date,
             "expiry_date": i.expiry_date,
+            "consume_date": i.consume_date,
+            "has_expiry_label": i.has_expiry_label,
             "price": i.price,
             "location": i.location,
-            "d_day": (i.expiry_date - date.today()).days
+            "d_day": (i.consume_date - date.today()).days
         }
         for i in ingredients
     ]}
@@ -95,12 +162,12 @@ def get_ingredients(db: Session = Depends(get_db)):
 def get_expiring_ingredients(days: int = 3, db: Session = Depends(get_db)):
     today = date.today()
     expiring = db.query(Ingredient).filter(
-        Ingredient.expiry_date <= today + timedelta(days=days),
-        Ingredient.expiry_date >= today
+        Ingredient.consume_date <= today + timedelta(days=days),
+        Ingredient.consume_date >= today
     ).all()
     
     expired = db.query(Ingredient).filter(
-        Ingredient.expiry_date < today
+        Ingredient.consume_date < today
     ).all()
     
     return {
@@ -108,10 +175,10 @@ def get_expiring_ingredients(days: int = 3, db: Session = Depends(get_db)):
             {
                 "id": i.id,
                 "name": i.name,
-                "expiry_date": i.expiry_date,
+                "consume_date": i.consume_date,
                 "price": i.price,
                 "location": i.location,
-                "d_day": (i.expiry_date - today).days
+                "d_day": (i.consume_date - today).days
             }
             for i in expiring
         ],
@@ -119,10 +186,10 @@ def get_expiring_ingredients(days: int = 3, db: Session = Depends(get_db)):
             {
                 "id": i.id,
                 "name": i.name,
-                "expiry_date": i.expiry_date,
+                "consume_date": i.consume_date,
                 "price": i.price,
                 "location": i.location,
-                "d_day": (i.expiry_date - today).days
+                "d_day": (i.consume_date - today).days
             }
             for i in expired
         ]
@@ -143,9 +210,11 @@ def search_ingredients(keyword: str, db: Session = Depends(get_db)):
             "name": i.name,
             "registered_date": i.registered_date,
             "expiry_date": i.expiry_date,
+            "consume_date": i.consume_date,
+            "has_expiry_label": i.has_expiry_label,
             "price": i.price,
             "location": i.location,
-            "d_day": (i.expiry_date - date.today()).days
+            "d_day": (i.consume_date - date.today()).days
         }
         for i in ingredients
     ]}
@@ -161,16 +230,20 @@ def delete_ingredient(ingredient_id: int, db: Session = Depends(get_db)):
 
 class IngredientCreate(BaseModel):
     name: str
-    expiry_days: int
+    expiry_days: int = None
+    consume_days: int = 7
     price: int = 0
     location: str = "냉장"
+    has_expiry_label: bool = False
 
 @app.post("/ingredients")
 def create_ingredient(item: IngredientCreate, db: Session = Depends(get_db)):
     ingredient = Ingredient(
         name=item.name,
         registered_date=date.today(),
-        expiry_date=date.today() + timedelta(days=item.expiry_days),
+        expiry_date=date.today() + timedelta(days=item.expiry_days) if item.expiry_days else None,
+        consume_date=date.today() + timedelta(days=item.consume_days),
+        has_expiry_label=1 if item.has_expiry_label else 0,
         price=item.price,
         location=item.location
     )
@@ -182,6 +255,8 @@ def create_ingredient(item: IngredientCreate, db: Session = Depends(get_db)):
         "name": ingredient.name,
         "registered_date": ingredient.registered_date,
         "expiry_date": ingredient.expiry_date,
+        "consume_date": ingredient.consume_date,
+        "has_expiry_label": ingredient.has_expiry_label,
         "price": ingredient.price,
         "location": ingredient.location
     }
@@ -189,8 +264,10 @@ def create_ingredient(item: IngredientCreate, db: Session = Depends(get_db)):
 class IngredientUpdate(BaseModel):
     name: str = None
     expiry_days: int = None
+    consume_days: int = None
     price: int = None
     location: str = None
+    has_expiry_label: bool = None
 
 @app.put("/ingredients/{ingredient_id}")
 def update_ingredient(ingredient_id: int, item: IngredientUpdate, db: Session = Depends(get_db)):
@@ -201,10 +278,14 @@ def update_ingredient(ingredient_id: int, item: IngredientUpdate, db: Session = 
         ingredient.name = item.name
     if item.expiry_days is not None:
         ingredient.expiry_date = date.today() + timedelta(days=item.expiry_days)
+    if item.consume_days is not None:
+        ingredient.consume_date = date.today() + timedelta(days=item.consume_days)
     if item.price is not None:
         ingredient.price = item.price
     if item.location is not None:
         ingredient.location = item.location
+    if item.has_expiry_label is not None:
+        ingredient.has_expiry_label = 1 if item.has_expiry_label else 0
     db.commit()
     db.refresh(ingredient)
     return {
@@ -212,6 +293,8 @@ def update_ingredient(ingredient_id: int, item: IngredientUpdate, db: Session = 
         "name": ingredient.name,
         "registered_date": ingredient.registered_date,
         "expiry_date": ingredient.expiry_date,
+        "consume_date": ingredient.consume_date,
+        "has_expiry_label": ingredient.has_expiry_label,
         "price": ingredient.price,
         "location": ingredient.location
     }
@@ -299,64 +382,20 @@ def get_monthly_expenses(year: int, month: int, db: Session = Depends(get_db)):
         ]
     }
 
-@app.post("/recognize/expiry-date")
-async def recognize_expiry(file: UploadFile = File(...)):
-    image_bytes = await file.read()
-    result = recognize_expiry_date(image_bytes)
-    
-    if not result["found"]:
-        return {"message": "유통기한을 찾을 수 없어요", "expiry_date": None}
-    
-    return {"expiry_date": result["expiry_date"]}
-
-@app.post("/recognize/receipt")
-async def recognize_receipt_api(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    image_bytes = await file.read()
-    ingredients = recognize_receipt(image_bytes)
-    
-    saved = []
-    for item in ingredients:
-        expiry_days = item.get("expiry_days") or 7  # None이면 기본 7일
-        ingredient = Ingredient(
-            name=item["name"],
-            registered_date=date.today(),
-            expiry_date=date.today() + timedelta(days=expiry_days),
-            price=item.get("price", 0),
-            location="냉장"
-        )
-        db.add(ingredient)
-        db.commit()
-        db.refresh(ingredient)
-        saved.append({
-            "id": ingredient.id,
-            "name": ingredient.name,
-            "quantity": item.get("quantity", 1),
-            "registered_date": ingredient.registered_date,
-            "expiry_date": ingredient.expiry_date,
-            "price": ingredient.price,
-            "location": ingredient.location
-        })
-    
-    return {"ingredients": saved}
-
 @app.get("/statistics")
 def get_statistics(db: Session = Depends(get_db)):
     today = date.today()
     all_ingredients = db.query(Ingredient).all()
     
-    # 전체 통계
     total_count = len(all_ingredients)
     total_spent = sum(i.price for i in all_ingredients)
     
-    # 유통기한 지난 재료 (버린 재료)
-    expired = [i for i in all_ingredients if i.expiry_date < today]
+    expired = [i for i in all_ingredients if i.consume_date < today]
     expired_count = len(expired)
     expired_value = sum(i.price for i in expired)
     
-    # 유통기한 임박 재료 (3일 이내)
-    expiring_soon = [i for i in all_ingredients if today <= i.expiry_date <= today + timedelta(days=3)]
+    expiring_soon = [i for i in all_ingredients if today <= i.consume_date <= today + timedelta(days=3)]
     
-    # 위치별 통계
     by_location = {}
     for i in all_ingredients:
         if i.location not in by_location:
@@ -364,8 +403,7 @@ def get_statistics(db: Session = Depends(get_db)):
         by_location[i.location]["count"] += 1
         by_location[i.location]["total_price"] += i.price
     
-    # 절약 통계 (유통기한 안 지난 재료 금액)
-    saved_value = sum(i.price for i in all_ingredients if i.expiry_date >= today)
+    saved_value = sum(i.price for i in all_ingredients if i.consume_date >= today)
     
     return {
         "total": {
@@ -375,11 +413,11 @@ def get_statistics(db: Session = Depends(get_db)):
         "expired": {
             "count": expired_count,
             "value": expired_value,
-            "ingredients": [{"name": i.name, "expiry_date": i.expiry_date, "price": i.price} for i in expired]
+            "ingredients": [{"name": i.name, "consume_date": i.consume_date, "price": i.price} for i in expired]
         },
         "expiring_soon": {
             "count": len(expiring_soon),
-            "ingredients": [{"name": i.name, "expiry_date": i.expiry_date, "d_day": (i.expiry_date - today).days} for i in expiring_soon]
+            "ingredients": [{"name": i.name, "consume_date": i.consume_date, "d_day": (i.consume_date - today).days} for i in expiring_soon]
         },
         "by_location": by_location,
         "saved_value": saved_value

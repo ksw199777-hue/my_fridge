@@ -15,7 +15,9 @@ class Ingredient(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     registered_date = Column(Date, default=date.today)
-    expiry_date = Column(Date)
+    expiry_date = Column(Date, nullable=True)  # 유통기한 (없을 수 있음)
+    consume_date = Column(Date)  # 소비기한
+    has_expiry_label = Column(Integer, default=0)  # 유통기한 표시 있는지 0/1
     price = Column(Integer, default=0)
     location = Column(String, default="냉장")
     
