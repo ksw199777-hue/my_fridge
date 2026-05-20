@@ -220,3 +220,36 @@ def search_ingredients(keyword: str, db: Session = Depends(get_db)):
         }
         for i in ingredients
     ]}
+
+@app.get("/expenses/monthly")
+def get_monthly_expenses(year: int, month: int, db: Session = Depends(get_db)):
+    from sqlalchemy import extract
+    
+    ingredients = db.query(Ingredient).filter(
+        extract('year', Ingredient.registered_date) == year,
+        extract('month', Ingredient.registered_date) == month
+    ).all()
+    
+    total = sum(i.price for i in ingredients)
+    
+    by_location = {}
+    for i in ingredients:
+        if i.location not in by_location:
+            by_location[i.location] = 0
+        by_location[i.location] += i.price
+    
+    return {
+        "year": year,
+        "month": month,
+        "total_expense": total,
+        "by_location": by_location,
+        "ingredients": [
+            {
+                "name": i.name,
+                "price": i.price,
+                "location": i.location,
+                "registered_date": i.registered_date
+            }
+            for i in ingredients
+        ]
+    }
