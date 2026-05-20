@@ -97,3 +97,16 @@ def get_expiring_ingredients(days: int = 3, db: Session = Depends(get_db)):
             for i in expired
         ]
     }
+
+@app.delete("/ingredients/{ingredient_id}")
+def delete_ingredient(ingredient_id: int, db: Session = Depends(get_db)):
+    ingredient = db.query(Ingredient).filter(Ingredient.id == ingredient_id).first()
+    
+    if not ingredient:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="재료를 찾을 수 없어요")
+    
+    db.delete(ingredient)
+    db.commit()
+    
+    return {"message": f"{ingredient.name} 삭제됐어요!"}
