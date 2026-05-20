@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from datetime import date, timedelta
 from app.ai import recognize_ingredients
 from app.database import get_db, create_tables, Ingredient
+from app.ai import recognize_ingredients, recommend_recipes
 
 load_dotenv()
 
@@ -54,3 +55,12 @@ def get_ingredients(db: Session = Depends(get_db)):
         }
         for i in ingredients
     ]}
+
+@app.get("/recipes")
+def get_recipes(db: Session = Depends(get_db)):
+    ingredients = db.query(Ingredient).all()
+    if not ingredients:
+        return {"message": "냉장고에 재료가 없어요!", "recipes": []}
+    
+    recipes = recommend_recipes(ingredients)
+    return {"recipes": recipes}
