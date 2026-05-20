@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from datetime import date, timedelta
 from app.database import get_db, create_tables, Ingredient
 from app.ai import recognize_ingredients, recommend_recipes, recognize_from_screenshot
+from pydantic import BaseModel
 
 load_dotenv()
 
@@ -134,3 +135,31 @@ async def recognize_screenshot(file: UploadFile = File(...), db: Session = Depen
         })
     
     return {"ingredients": saved}
+
+class IngredientCreate(BaseModel):
+    name: str
+    expiry_days: int
+    price: int = 0
+    location: str = "냉장"  # 냉장/냉동/실온
+
+@app.post("/ingredients")
+def create_ingredient(item: IngredientCreate, db: Session = Depends(get_db)):
+    ingredient = Ingredient(
+        name=item.name,
+        registered_date=date.today(),
+        expiry_date=date.today() + timedelta(days=item.expiry_days),
+        price=item.price,
+        location=item.location
+    )
+    db.add(ingredient)
+    db.commit()
+    db.refresh(ingredient)
+    
+    return {
+        "id": ingredient.id,
+        "name": ingredient.name,
+        "registered_date": ingredient.registered_date,
+        "expiry_date": ingredient.expiry_date,
+        "price": ingredient.price,
+        "location": ingredient.location
+    }
