@@ -135,3 +135,49 @@ def recognize_from_screenshot(image_bytes: bytes) -> list:
         result = json.loads(json_match.group())
         return result["ingredients"]
     return []
+
+def recognize_expiry_date(image_bytes: bytes) -> dict:
+    image_base64 = base64.standard_b64encode(image_bytes).decode("utf-8")
+    
+    message = client.messages.create(
+        model="claude-opus-4-5",
+        max_tokens=1024,
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/jpeg",
+                            "data": image_base64,
+                        },
+                    },
+                    {
+                        "type": "text",
+                        "text": """이 사진에서 유통기한 또는 소비기한 날짜를 찾아주세요.
+
+다음 JSON 형식으로만 답해주세요:
+{
+    "expiry_date": "YYYY-MM-DD",
+    "found": true
+}
+날짜를 찾을 수 없으면:
+{
+    "expiry_date": null,
+    "found": false
+}"""
+                    }
+                ],
+            }
+        ],
+    )
+    
+    import json
+    import re
+    response_text = message.content[0].text
+    json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+    if json_match:
+        return json.loads(json_match.group())
+    return {"expiry_date": None, "found": False}

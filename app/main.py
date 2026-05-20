@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 from datetime import date, timedelta
 from app.database import get_db, create_tables, Ingredient, ShoppingItem
-from app.ai import recognize_ingredients, recommend_recipes, recognize_from_screenshot
+from app.ai import recognize_ingredients, recommend_recipes, recognize_from_screenshot, recognize_expiry_date
 from pydantic import BaseModel
 
 load_dotenv()
@@ -298,3 +298,13 @@ def get_monthly_expenses(year: int, month: int, db: Session = Depends(get_db)):
             for i in ingredients
         ]
     }
+
+@app.post("/recognize/expiry-date")
+async def recognize_expiry(file: UploadFile = File(...)):
+    image_bytes = await file.read()
+    result = recognize_expiry_date(image_bytes)
+    
+    if not result["found"]:
+        return {"message": "유통기한을 찾을 수 없어요", "expiry_date": None}
+    
+    return {"expiry_date": result["expiry_date"]}
