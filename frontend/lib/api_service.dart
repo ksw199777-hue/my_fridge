@@ -33,6 +33,28 @@ class ApiService {
     return response.statusCode == 200;
   }
 
+  // 재료 수정
+  static Future<bool> updateIngredient(
+    int id, {
+    String? name,
+    int? consumeDays,
+    int? price,
+    String? location,
+  }) async {
+    final body = <String, dynamic>{};
+    if (name != null) body['name'] = name;
+    if (consumeDays != null) body['consume_days'] = consumeDays;
+    if (price != null) body['price'] = price;
+    if (location != null) body['location'] = location;
+
+    final response = await http.put(
+      Uri.parse('$baseUrl/ingredients/$id'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+    return response.statusCode == 200;
+  }
+
   // 유통기한 임박 재료
   static Future<Map<String, dynamic>> getExpiringIngredients() async {
     final response = await http.get(Uri.parse('$baseUrl/ingredients/expiring?days=7'));
