@@ -198,3 +198,25 @@ def update_ingredient(ingredient_id: int, item: IngredientUpdate, db: Session = 
         "price": ingredient.price,
         "location": ingredient.location
     }
+
+@app.get("/ingredients/search")
+def search_ingredients(keyword: str, db: Session = Depends(get_db)):
+    ingredients = db.query(Ingredient).filter(
+        Ingredient.name.contains(keyword)
+    ).all()
+    
+    if not ingredients:
+        return {"message": f"'{keyword}' 검색 결과가 없어요", "ingredients": []}
+    
+    return {"ingredients": [
+        {
+            "id": i.id,
+            "name": i.name,
+            "registered_date": i.registered_date,
+            "expiry_date": i.expiry_date,
+            "price": i.price,
+            "location": i.location,
+            "d_day": (i.expiry_date - date.today()).days
+        }
+        for i in ingredients
+    ]}
