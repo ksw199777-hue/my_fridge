@@ -163,3 +163,38 @@ def create_ingredient(item: IngredientCreate, db: Session = Depends(get_db)):
         "price": ingredient.price,
         "location": ingredient.location
     }
+
+class IngredientUpdate(BaseModel):
+    name: str = None
+    expiry_days: int = None
+    price: int = None
+    location: str = None
+
+@app.put("/ingredients/{ingredient_id}")
+def update_ingredient(ingredient_id: int, item: IngredientUpdate, db: Session = Depends(get_db)):
+    ingredient = db.query(Ingredient).filter(Ingredient.id == ingredient_id).first()
+    
+    if not ingredient:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="재료를 찾을 수 없어요")
+    
+    if item.name is not None:
+        ingredient.name = item.name
+    if item.expiry_days is not None:
+        ingredient.expiry_date = date.today() + timedelta(days=item.expiry_days)
+    if item.price is not None:
+        ingredient.price = item.price
+    if item.location is not None:
+        ingredient.location = item.location
+    
+    db.commit()
+    db.refresh(ingredient)
+    
+    return {
+        "id": ingredient.id,
+        "name": ingredient.name,
+        "registered_date": ingredient.registered_date,
+        "expiry_date": ingredient.expiry_date,
+        "price": ingredient.price,
+        "location": ingredient.location
+    }
