@@ -3,3 +3,4 @@ uvicorn
 anthropic
 python-multipart
 python-dotenv
+sqlalchemy
