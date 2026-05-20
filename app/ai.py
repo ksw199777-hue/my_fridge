@@ -86,7 +86,7 @@ def recommend_recipes(ingredients: list) -> list:
         }}
     ]
 }}
-3가지 요리만 추천해주세요."""
+5가지 요리만 추천해주세요."""
             }
         ],
     )
