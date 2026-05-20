@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
-const String baseUrl = 'http://127.0.0.1:8000';
+const String baseUrl = 'http://192.168.123.102:8000';
 
 class ApiService {
   // 재료 목록 조회
