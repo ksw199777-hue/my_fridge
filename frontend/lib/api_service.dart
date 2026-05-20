@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
-const String baseUrl = 'http://127.0.0.1:8000';
+const String baseUrl = 'https://myfridge-production-8a71.up.railway.app';
 
 class ApiService {
   // 재료 목록 조회
