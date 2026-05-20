@@ -67,7 +67,7 @@ def recommend_recipes(ingredients: list) -> list:
     
     message = client.messages.create(
         model="claude-opus-4-5",
-        max_tokens=1024,
+        max_tokens=2048,
         messages=[
             {
                 "role": "user",
@@ -82,11 +82,17 @@ def recommend_recipes(ingredients: list) -> list:
             "ingredients_needed": ["필요재료1", "필요재료2"],
             "missing_ingredients": ["없는재료1"],
             "difficulty": "쉬움/보통/어려움",
-            "cooking_time": "조리시간(분)"
+            "cooking_time": "조리시간(분)",
+            "steps": [
+                "1. 첫번째 단계",
+                "2. 두번째 단계",
+                "3. 세번째 단계"
+            ]
         }}
     ]
 }}
-5가지 요리만 추천해주세요."""
+5가지 요리만 추천해주세요.
+steps는 5단계 이내로 간단하게 작성해주세요."""
             }
         ],
     )
