@@ -64,3 +64,36 @@ def get_recipes(db: Session = Depends(get_db)):
     
     recipes = recommend_recipes(ingredients)
     return {"recipes": recipes}
+
+@app.get("/ingredients/expiring")
+def get_expiring_ingredients(days: int = 3, db: Session = Depends(get_db)):
+    today = date.today()
+    expiring = db.query(Ingredient).filter(
+        Ingredient.expiry_date <= today + timedelta(days=days),
+        Ingredient.expiry_date >= today
+    ).all()
+    
+    expired = db.query(Ingredient).filter(
+        Ingredient.expiry_date < today
+    ).all()
+    
+    return {
+        "expiring_soon": [
+            {
+                "id": i.id,
+                "name": i.name,
+                "expiry_date": i.expiry_date,
+                "d_day": (i.expiry_date - today).days
+            }
+            for i in expiring
+        ],
+        "expired": [
+            {
+                "id": i.id,
+                "name": i.name,
+                "expiry_date": i.expiry_date,
+                "d_day": (i.expiry_date - today).days
+            }
+            for i in expired
+        ]
+    }
