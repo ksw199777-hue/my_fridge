@@ -221,46 +221,35 @@ def search_ingredients(keyword: str, db: Session = Depends(get_db)):
         for i in ingredients
     ]}
 
-class ShoppingItemCreate(BaseModel):
-    name: str
-    quantity: int = 1
-
-@app.post("/shopping")
-def add_shopping_item(item: ShoppingItemCreate, db: Session = Depends(get_db)):
-    shopping_item = ShoppingItem(
-        name=item.name,
-        quantity=item.quantity,
-        created_date=date.today()
-    )
-    db.add(shopping_item)
-    db.commit()
-    db.refresh(shopping_item)
-    return {"id": shopping_item.id, "name": shopping_item.name, "quantity": shopping_item.quantity, "is_purchased": shopping_item.is_purchased}
-
-@app.get("/shopping")
-def get_shopping_list(db: Session = Depends(get_db)):
-    items = db.query(ShoppingItem).filter(ShoppingItem.is_purchased == 0).all()
-    return {"shopping_list": [
-        {"id": i.id, "name": i.name, "quantity": i.quantity}
-        for i in items
-    ]}
-
-@app.put("/shopping/{item_id}/purchased")
-def mark_purchased(item_id: int, db: Session = Depends(get_db)):
-    item = db.query(ShoppingItem).filter(ShoppingItem.id == item_id).first()
-    if not item:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="아이템을 찾을 수 없어요")
-    item.is_purchased = 1
-    db.commit()
-    return {"message": f"{item.name} 구매 완료!"}
-
-@app.delete("/shopping/{item_id}")
-def delete_shopping_item(item_id: int, db: Session = Depends(get_db)):
-    item = db.query(ShoppingItem).filter(ShoppingItem.id == item_id).first()
-    if not item:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="아이템을 찾을 수 없어요")
-    db.delete(item)
-    db.commit()
-    return {"message": f"{item.name} 삭제됐어요!"}
+@app.get("/expenses/monthly")
+def get_monthly_expenses(year: int, month: int, db: Session = Depends(get_db)):
+    from sqlalchemy import extract
+    
+    ingredients = db.query(Ingredient).filter(
+        extract('year', Ingredient.registered_date) == year,
+        extract('month', Ingredient.registered_date) == month
+    ).all()
+    
+    total = sum(i.price for i in ingredients)
+    
+    by_location = {}
+    for i in ingredients:
+        if i.location not in by_location:
+            by_location[i.location] = 0
+        by_location[i.location] += i.price
+    
+    return {
+        "year": year,
+        "month": month,
+        "total_expense": total,
+        "by_location": by_location,
+        "ingredients": [
+            {
+                "name": i.name,
+                "price": i.price,
+                "location": i.location,
+                "registered_date": i.registered_date
+            }
+            for i in ingredients
+        ]
+    }
