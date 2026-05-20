@@ -338,3 +338,49 @@ async def recognize_receipt_api(file: UploadFile = File(...), db: Session = Depe
         })
     
     return {"ingredients": saved}
+
+@app.get("/statistics")
+def get_statistics(db: Session = Depends(get_db)):
+    today = date.today()
+    all_ingredients = db.query(Ingredient).all()
+    
+    # 전체 통계
+    total_count = len(all_ingredients)
+    total_spent = sum(i.price for i in all_ingredients)
+    
+    # 유통기한 지난 재료 (버린 재료)
+    expired = [i for i in all_ingredients if i.expiry_date < today]
+    expired_count = len(expired)
+    expired_value = sum(i.price for i in expired)
+    
+    # 유통기한 임박 재료 (3일 이내)
+    expiring_soon = [i for i in all_ingredients if today <= i.expiry_date <= today + timedelta(days=3)]
+    
+    # 위치별 통계
+    by_location = {}
+    for i in all_ingredients:
+        if i.location not in by_location:
+            by_location[i.location] = {"count": 0, "total_price": 0}
+        by_location[i.location]["count"] += 1
+        by_location[i.location]["total_price"] += i.price
+    
+    # 절약 통계 (유통기한 안 지난 재료 금액)
+    saved_value = sum(i.price for i in all_ingredients if i.expiry_date >= today)
+    
+    return {
+        "total": {
+            "count": total_count,
+            "total_spent": total_spent
+        },
+        "expired": {
+            "count": expired_count,
+            "value": expired_value,
+            "ingredients": [{"name": i.name, "expiry_date": i.expiry_date, "price": i.price} for i in expired]
+        },
+        "expiring_soon": {
+            "count": len(expiring_soon),
+            "ingredients": [{"name": i.name, "expiry_date": i.expiry_date, "d_day": (i.expiry_date - today).days} for i in expiring_soon]
+        },
+        "by_location": by_location,
+        "saved_value": saved_value
+    }
