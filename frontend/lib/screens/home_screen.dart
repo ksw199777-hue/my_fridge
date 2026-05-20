@@ -92,6 +92,211 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _showIngredientDetail(dynamic item) {
+    final dDay = item['d_day'] as int;
+    final isExpired = dDay < 0;
+    final nameController = TextEditingController(text: item['name']);
+    final consumeController = TextEditingController(text: '');
+    final priceController = TextEditingController(text: '${item['price']}');
+    String selectedLocation = item['location'];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            left: 16, right: 16, top: 16,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40, height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // 만료 경고
+                if (isExpired)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFEBEB),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.warning_amber, color: Colors.red),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '소비기한이 지났어요!\n재료 상태 확인 후 폐기 완료하면 삭제해주세요 🗑️',
+                            style: TextStyle(color: Colors.red, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                if (isExpired) const SizedBox(height: 12),
+
+                Text(
+                  item['name'],
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  item['expiry_date'] != null
+                      ? '유통기한: ${item['expiry_date']} / 소비기한: ${item['consume_date']}'
+                      : '소비기한: ${item['consume_date']}',
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                ),
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 8),
+
+                // 수정 폼
+                const Text('✏️ 수정하기',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: '재료 이름',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.food_bank, color: Color(0xFF4A90D9)),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: consumeController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: '소비기한 (오늘부터 며칠?)',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.calendar_month, color: Color(0xFFFFB347)),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: priceController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: '가격 (원)',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.attach_money, color: Color(0xFFFF6B6B)),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: selectedLocation,
+                  decoration: const InputDecoration(
+                    labelText: '보관 위치',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.location_on, color: Color(0xFFDDA0DD)),
+                  ),
+                  items: ['냉장', '냉동', '실온'].map((loc) =>
+                    DropdownMenuItem(value: loc, child: Text(loc))).toList(),
+                  onChanged: (val) => setModalState(() => selectedLocation = val!),
+                ),
+                const SizedBox(height: 16),
+
+                // 수정 버튼
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      await ApiService.updateIngredient(
+                        item['id'],
+                        name: nameController.text,
+                        consumeDays: consumeController.text.isNotEmpty
+                            ? int.parse(consumeController.text)
+                            : null,
+                        price: int.tryParse(priceController.text),
+                        location: selectedLocation,
+                      );
+                      Navigator.pop(context);
+                      _loadIngredients();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4A90D9),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('수정 완료', style: TextStyle(fontSize: 16)),
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // 삭제 버튼
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () async {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16)),
+                          title: const Text('재료 삭제'),
+                          content: Text('${item['name']}을(를) 삭제할까요?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('취소'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text('삭제',
+                                  style: TextStyle(color: Colors.red)),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirm == true) {
+                        await ApiService.deleteIngredient(item['id']);
+                        Navigator.pop(context);
+                        _loadIngredients();
+                      }
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Text(
+                      isExpired ? '🗑️ 폐기 완료 - 삭제하기' : '삭제하기',
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -201,88 +406,66 @@ class _HomeScreenState extends State<HomeScreen> {
                               final item = _filteredIngredients[index];
                               final dDay = item['d_day'] as int;
                               final avatarColor = _getAvatarColor(item['name']);
-                              return Card(
-                                margin: const EdgeInsets.only(bottom: 10),
-                                color: _getCardColor(dDay),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: ListTile(
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 8),
-                                  leading: CircleAvatar(
-                                    backgroundColor: avatarColor.withOpacity(0.2),
-                                    child: Text(
-                                      item['name'][0],
-                                      style: TextStyle(
+                              return GestureDetector(
+                                onTap: () => _showIngredientDetail(item),
+                                child: Card(
+                                  margin: const EdgeInsets.only(bottom: 10),
+                                  color: _getCardColor(dDay),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 8),
+                                    leading: CircleAvatar(
+                                      backgroundColor: avatarColor.withOpacity(0.2),
+                                      child: Text(
+                                        item['name'][0],
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: avatarColor,
+                                            fontSize: 18),
+                                      ),
+                                    ),
+                                    title: Text(
+                                      item['name'],
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold, fontSize: 16),
+                                    ),
+                                    subtitle: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const SizedBox(height: 4),
+                                        Text('${_getLocationEmoji(item['location'])} ${item['location']}'),
+                                        if (item['expiry_date'] != null)
+                                          Text('📦 유통기한: ${item['expiry_date']}'),
+                                        Text('🗓 소비기한: ${item['consume_date']}'),
+                                        if (item['has_expiry_label'] == 0)
+                                          const Text(
+                                            '⚠️ 오늘 기준 산출 (탭해서 수정 가능)',
+                                            style: TextStyle(fontSize: 11, color: Colors.orange),
+                                          ),
+                                        if (item['price'] > 0)
+                                          Text('💰 ${item['price']}원'),
+                                      ],
+                                    ),
+                                    trailing: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: _getDdayColor(dDay).withOpacity(0.15),
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(color: _getDdayColor(dDay)),
+                                      ),
+                                      child: Text(
+                                        _getDdayText(dDay),
+                                        style: TextStyle(
+                                          color: _getDdayColor(dDay),
                                           fontWeight: FontWeight.bold,
-                                          color: avatarColor,
-                                          fontSize: 18),
-                                    ),
-                                  ),
-                                  title: Text(
-                                    item['name'],
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.bold, fontSize: 16),
-                                  ),
-                                  subtitle: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const SizedBox(height: 4),
-                                      Text('${_getLocationEmoji(item['location'])} ${item['location']}'),
-                                      if (item['expiry_date'] != null)
-                                        Text('📦 유통기한: ${item['expiry_date']}'),
-                                      Text('🗓 소비기한: ${item['consume_date']}'),
-                                      if (item['has_expiry_label'] == 0)
-                                        const Text(
-                                          '⚠️ 오늘 기준 산출 (수정 가능)',
-                                          style: TextStyle(fontSize: 11, color: Colors.orange),
                                         ),
-                                      if (item['price'] > 0)
-                                        Text('💰 ${item['price']}원'),
-                                    ],
-                                  ),
-                                  trailing: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: _getDdayColor(dDay).withOpacity(0.15),
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(color: _getDdayColor(dDay)),
-                                    ),
-                                    child: Text(
-                                      _getDdayText(dDay),
-                                      style: TextStyle(
-                                        color: _getDdayColor(dDay),
-                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ),
-                                  onLongPress: () async {
-                                    final confirm = await showDialog<bool>(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(16)),
-                                        title: const Text('재료 삭제'),
-                                        content: Text('${item['name']}을(를) 삭제할까요?'),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.pop(context, false),
-                                            child: const Text('취소'),
-                                          ),
-                                          TextButton(
-                                            onPressed: () => Navigator.pop(context, true),
-                                            child: const Text('삭제',
-                                                style: TextStyle(color: Colors.red)),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                    if (confirm == true) {
-                                      await ApiService.deleteIngredient(item['id']);
-                                      _loadIngredients();
-                                    }
-                                  },
                                 ),
                               );
                             },
