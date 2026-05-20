@@ -5,3 +5,9 @@ __pycache__/
 .env
 .DS_Store
 my_fridge.db
+
+# Flutter
+frontend/.dart_tool/
+frontend/build/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
