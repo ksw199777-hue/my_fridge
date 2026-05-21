@@ -79,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const Center(
                 child: Column(
                   children: [
-                    Text('🧊', style: TextStyle(fontSize: 80)),
+                    Icon(Icons.kitchen, size: 80, color: Color(0xFF4A90D9)),
                     SizedBox(height: 16),
                     Text(
                       '나만의 냉장고',
