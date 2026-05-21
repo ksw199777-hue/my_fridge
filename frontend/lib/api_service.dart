@@ -124,16 +124,6 @@ class ApiService {
     return [];
   }
 
-  // 쇼핑 아이템 추가
-  static Future<bool> addShoppingItem(String name, int quantity) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/shopping'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'name': name, 'quantity': quantity}),
-    );
-    return response.statusCode == 200;
-  }
-
   // 구매 완료
   static Future<bool> markPurchased(int id) async {
     final response = await http.put(Uri.parse('$baseUrl/shopping/$id/purchased'));
