@@ -191,4 +191,13 @@ class ApiService {
     }
     return {};
   }
+
+ // 쇼핑 예상 가격
+  static Future<Map<String, dynamic>> estimateShoppingPrice() async {
+    final response = await http.get(Uri.parse('$baseUrl/shopping/estimate'));
+    if (response.statusCode == 200) {
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    }
+    return {'items': [], 'total': 0};
+  }
 }
