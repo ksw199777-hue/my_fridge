@@ -27,9 +27,11 @@ class ApiService {
     return {'ingredients': [], 'message': null};
   }
 
-  // 재료 삭제
-  static Future<bool> deleteIngredient(int id) async {
-    final response = await http.delete(Uri.parse('$baseUrl/ingredients/$id'));
+  // 재료 삭제 (식재료비 포함 여부 선택)
+  static Future<bool> deleteIngredient(int id, {bool deleteHistory = false}) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/ingredients/$id?delete_history=$deleteHistory'),
+    );
     return response.statusCode == 200;
   }
 
