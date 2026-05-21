@@ -260,3 +260,44 @@ def recognize_receipt(image_bytes: bytes) -> list:
         result = json.loads(json_match.group())
         return result["ingredients"]
     return []
+
+def chat_recipe(message: str, ingredient_names: str) -> str:
+    message_response = client.messages.create(
+        model="claude-opus-4-5",
+        max_tokens=1024,
+        messages=[
+            {
+                "role": "user",
+                "content": f"""당신은 요리 전문가입니다. 사용자의 냉장고에 있는 재료를 기반으로 요리를 추천해주세요.
+
+현재 냉장고 재료: {ingredient_names}
+
+사용자 요청: {message}
+
+다음 JSON 형식으로만 답해주세요:
+{{
+    "response": "친근하고 자연스러운 답변",
+    "recipes": [
+        {{
+            "name": "요리명",
+            "ingredients_needed": ["재료1", "재료2"],
+            "missing_ingredients": ["없는재료1"],
+            "difficulty": "쉬움/보통/어려움",
+            "cooking_time": "조리시간(분)",
+            "steps": ["1. 단계1", "2. 단계2"]
+        }}
+    ]
+}}
+레시피가 필요없는 일반 대화면 recipes는 빈 배열로 반환해주세요."""
+            }
+        ],
+    )
+    
+    import json
+    import re
+    response_text = message_response.content[0].text
+    json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+    if json_match:
+        result = json.loads(json_match.group())
+        return result
+    return {"response": "죄송해요, 다시 한번 말씀해주세요!", "recipes": []}

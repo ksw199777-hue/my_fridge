@@ -422,3 +422,15 @@ def get_statistics(db: Session = Depends(get_db)):
         "by_location": by_location,
         "saved_value": saved_value
     }
+
+class RecipeChatRequest(BaseModel):
+    message: str
+
+@app.post("/recipe/chat")
+async def recipe_chat(request: RecipeChatRequest, db: Session = Depends(get_db)):
+    ingredients = db.query(Ingredient).all()
+    ingredient_names = ", ".join([i.name for i in ingredients]) if ingredients else "없음"
+    
+    from app.ai import chat_recipe
+    response = chat_recipe(request.message, ingredient_names)
+    return {"response": response}

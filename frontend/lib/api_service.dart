@@ -169,4 +169,17 @@ class ApiService {
     }
     return {'ingredients': [], 'message': null};
   }
+
+    // 레시피 채팅
+  static Future<Map<String, dynamic>> recipeChat(String message) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/recipe/chat'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'message': message}),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    }
+    return {'response': '오류가 발생했어요', 'recipes': []};
+  }
 }
