@@ -34,8 +34,8 @@ class ShoppingItem(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
-    quantity = Column(Integer, default=1)
-    is_purchased = Column(Integer, default=0)  # 0: 미구매, 1: 구매완료
+    quantity = Column(String, default="1개")
+    is_purchased = Column(Integer, default=0)
     created_date = Column(Date, default=date.today)
 
 def get_db():

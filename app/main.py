@@ -347,7 +347,7 @@ async def recipe_chat(request: RecipeChatRequest, db: Session = Depends(get_db))
 
 class ShoppingItemCreate(BaseModel):
     name: str
-    quantity: int = 1
+    quantity: str = "1개"
 
 @app.post("/shopping")
 def add_shopping_item(item: ShoppingItemCreate, db: Session = Depends(get_db)):

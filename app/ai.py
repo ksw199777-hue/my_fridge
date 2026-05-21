@@ -261,10 +261,10 @@ def recognize_receipt(image_bytes: bytes) -> list:
         return result["ingredients"]
     return []
 
-def chat_recipe(message: str, ingredient_names: str) -> str:
+def chat_recipe(message: str, ingredient_names: str) -> dict:
     message_response = client.messages.create(
         model="claude-opus-4-5",
-        max_tokens=1024,
+        max_tokens=2048,
         messages=[
             {
                 "role": "user",
@@ -274,9 +274,9 @@ def chat_recipe(message: str, ingredient_names: str) -> str:
 
 사용자 요청: {message}
 
-다음 JSON 형식으로만 답해주세요:
+반드시 다음 JSON 형식으로만 답해주세요. 다른 텍스트는 절대 포함하지 마세요:
 {{
-    "response": "친근하고 자연스러운 답변",
+    "response": "친근하고 자연스러운 답변 (2-3문장)",
     "recipes": [
         {{
             "name": "요리명",
@@ -288,54 +288,28 @@ def chat_recipe(message: str, ingredient_names: str) -> str:
         }}
     ]
 }}
-레시피가 필요없는 일반 대화면 recipes는 빈 배열로 반환해주세요."""
+레시피가 필요없는 일반 대화면 recipes는 빈 배열로 반환해주세요.
+JSON 외의 텍스트는 절대 포함하지 마세요."""
             }
         ],
     )
     
     import json
     import re
-    response_text = message_response.content[0].text
+    
+    response_text = message_response.content[0].text.strip()
+    
+    # JSON 부분만 추출
     json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
     if json_match:
-        result = json.loads(json_match.group())
-        return result
-    return {"response": "죄송해요, 다시 한번 말씀해주세요!", "recipes": []}
-
-def estimate_price(items: list) -> dict:
-    item_names = ", ".join([f"{item['name']} {item['quantity']}개" for item in items])
+        try:
+            result = json.loads(json_match.group())
+            return result
+        except json.JSONDecodeError:
+            pass
     
-    message = client.messages.create(
-        model="claude-opus-4-5",
-        max_tokens=1024,
-        messages=[
-            {
-                "role": "user",
-                "content": f"""다음 식재료들의 한국 마트 기준 평균 가격을 알려주세요.
-
-식재료 목록: {item_names}
-
-다음 JSON 형식으로만 답해주세요:
-{{
-    "items": [
-        {{
-            "name": "재료명",
-            "quantity": 수량,
-            "unit_price": 개당평균가격(원),
-            "total_price": 총가격(원)
-        }}
-    ],
-    "total": 전체합계(원)
-}}
-가격은 숫자만 입력해주세요."""
-            }
-        ],
-    )
-    
-    import json
-    import re
-    response_text = message.content[0].text
-    json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-    if json_match:
-        return json.loads(json_match.group())
-    return {"items": [], "total": 0}
+    # JSON 파싱 실패시 텍스트를 그대로 반환
+    return {
+        "response": response_text if response_text else "죄송해요, 다시 한번 말씀해주세요!",
+        "recipes": []
+    }
