@@ -4,10 +4,11 @@ from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 from datetime import date, timedelta
 from app.database import get_db, create_tables, Ingredient, ShoppingItem, PurchaseHistory
-from app.ai import recognize_ingredients, recommend_recipes, recognize_from_screenshot, recognize_expiry_date, recognize_receipt, chat_recipe
+from app.ai import recognize_ingredients, recommend_recipes, recognize_from_screenshot, recognize_expiry_date, recognize_receipt, chat_recipe, estimate_price
 from pydantic import BaseModel
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+
 
 load_dotenv()
 
@@ -473,3 +474,13 @@ def get_statistics(db: Session = Depends(get_db)):
         "by_location": by_location,
         "saved_value": saved_value
     }
+
+@app.get("/shopping/estimate")
+def estimate_shopping_price(db: Session = Depends(get_db)):
+    items = db.query(ShoppingItem).filter(ShoppingItem.is_purchased == 0).all()
+    if not items:
+        return {"message": "쇼핑 목록이 비어있어요!", "items": [], "total": 0}
+    
+    item_list = [{"name": i.name, "quantity": i.quantity} for i in items]
+    result = estimate_price(item_list)
+    return result

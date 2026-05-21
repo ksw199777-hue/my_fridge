@@ -301,3 +301,41 @@ def chat_recipe(message: str, ingredient_names: str) -> str:
         result = json.loads(json_match.group())
         return result
     return {"response": "죄송해요, 다시 한번 말씀해주세요!", "recipes": []}
+
+def estimate_price(items: list) -> dict:
+    item_names = ", ".join([f"{item['name']} {item['quantity']}개" for item in items])
+    
+    message = client.messages.create(
+        model="claude-opus-4-5",
+        max_tokens=1024,
+        messages=[
+            {
+                "role": "user",
+                "content": f"""다음 식재료들의 한국 마트 기준 평균 가격을 알려주세요.
+
+식재료 목록: {item_names}
+
+다음 JSON 형식으로만 답해주세요:
+{{
+    "items": [
+        {{
+            "name": "재료명",
+            "quantity": 수량,
+            "unit_price": 개당평균가격(원),
+            "total_price": 총가격(원)
+        }}
+    ],
+    "total": 전체합계(원)
+}}
+가격은 숫자만 입력해주세요."""
+            }
+        ],
+    )
+    
+    import json
+    import re
+    response_text = message.content[0].text
+    json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+    if json_match:
+        return json.loads(json_match.group())
+    return {"items": [], "total": 0}
