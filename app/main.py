@@ -343,7 +343,7 @@ async def recipe_chat(request: RecipeChatRequest, db: Session = Depends(get_db))
     ingredients = db.query(Ingredient).all()
     ingredient_names = ", ".join([i.name for i in ingredients]) if ingredients else "없음"
     response = chat_recipe(request.message, ingredient_names)
-    return {"response": response}
+    return response
 
 class ShoppingItemCreate(BaseModel):
     name: str
