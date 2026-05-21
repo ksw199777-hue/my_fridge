@@ -1,65 +1,215 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 const String baseUrl = 'https://myfridge-production-8a71.up.railway.app';
 
 class ApiService {
-  // 재료 목록 조회
-  static Future<List<dynamic>> getIngredients() async {
-    final response = await http.get(Uri.parse('$baseUrl/ingredients'));
+  static String? _token;
+  static int? _currentFridgeId;
+
+  static Future<void> init() async {
+    final prefs = await SharedPreferences.getInstance();
+    _token = prefs.getString('token');
+    _currentFridgeId = prefs.getInt('current_fridge_id');
+  }
+
+  static Future<void> saveToken(String token) async {
+    _token = token;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('token', token);
+  }
+
+  static Future<void> saveFridgeId(int fridgeId) async {
+    _currentFridgeId = fridgeId;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('current_fridge_id', fridgeId);
+  }
+
+  static Future<void> logout() async {
+    _token = null;
+    _currentFridgeId = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+  }
+
+  static Map<String, String> get _headers => {
+    'Content-Type': 'application/json',
+    if (_token != null) 'Authorization': 'Bearer $_token',
+  };
+
+  static bool get isLoggedIn => _token != null;
+  static int? get currentFridgeId => _currentFridgeId;
+
+  // 회원가입
+  static Future<Map<String, dynamic>> register(String email, String username, String password) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/register'),
+      headers: _headers,
+      body: jsonEncode({'email': email, 'username': username, 'password': password}),
+    );
+    return jsonDecode(utf8.decode(response.bodyBytes));
+  }
+
+  // 로그인
+  static Future<Map<String, dynamic>> login(String email, String password) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/login'),
+      headers: _headers,
+      body: jsonEncode({'email': email, 'password': password}),
+    );
+    return jsonDecode(utf8.decode(response.bodyBytes));
+  }
+
+  // 내 정보
+  static Future<Map<String, dynamic>> getMe() async {
+    final response = await http.get(Uri.parse('$baseUrl/auth/me'), headers: _headers);
+    return jsonDecode(utf8.decode(response.bodyBytes));
+  }
+
+  // 냉장고 목록
+  static Future<List<dynamic>> getFridges() async {
+    final response = await http.get(Uri.parse('$baseUrl/fridges'), headers: _headers);
     if (response.statusCode == 200) {
-      final data = jsonDecode(utf8.decode(response.bodyBytes));
-      return data['ingredients'];
+      return jsonDecode(utf8.decode(response.bodyBytes))['fridges'];
     }
     return [];
   }
 
-  // 재료 인식 (사진)
-  static Future<Map<String, dynamic>> recognizeIngredientWithMessage(Uint8List imageBytes) async {
-    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/recognize'));
-    request.files.add(http.MultipartFile.fromBytes('file', imageBytes, filename: 'image.jpg'));
-    final response = await request.send();
-    final body = await response.stream.bytesToString();
-    if (response.statusCode == 200) {
-      return jsonDecode(body);
-    }
-    return {'ingredients': [], 'message': null};
+  // 냉장고 생성
+  static Future<Map<String, dynamic>> createFridge(String name) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/fridges'),
+      headers: _headers,
+      body: jsonEncode({'name': name}),
+    );
+    return jsonDecode(utf8.decode(response.bodyBytes));
   }
 
-  // 재료 삭제 (식재료비 포함 여부 선택)
-  static Future<bool> deleteIngredient(int id, {bool deleteHistory = false}) async {
-    final response = await http.delete(
-      Uri.parse('$baseUrl/ingredients/$id?delete_history=$deleteHistory'),
+  // 냉장고 참여
+  static Future<Map<String, dynamic>> joinFridge(String inviteCode) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/fridges/join?invite_code=$inviteCode'),
+      headers: _headers,
+    );
+    return jsonDecode(utf8.decode(response.bodyBytes));
+  }
+
+  // 재료 목록
+  static Future<List<dynamic>> getIngredients() async {
+    if (_currentFridgeId == null) return [];
+    final response = await http.get(
+      Uri.parse('$baseUrl/ingredients?fridge_id=$_currentFridgeId'),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(utf8.decode(response.bodyBytes))['ingredients'];
+    }
+    return [];
+  }
+
+  // 재료 추가
+  static Future<bool> addIngredient({
+    required String name,
+    int? expiryDays,
+    int consumeDays = 7,
+    int price = 0,
+    String location = '냉장',
+    bool hasExpiryLabel = false,
+  }) async {
+    if (_currentFridgeId == null) return false;
+    final response = await http.post(
+      Uri.parse('$baseUrl/ingredients?fridge_id=$_currentFridgeId'),
+      headers: _headers,
+      body: jsonEncode({
+        'name': name,
+        'expiry_days': expiryDays,
+        'consume_days': consumeDays,
+        'price': price,
+        'location': location,
+        'has_expiry_label': hasExpiryLabel,
+      }),
     );
     return response.statusCode == 200;
   }
 
+  // 재료 인식
+  static Future<Map<String, dynamic>> recognizeIngredients(List<int> imageBytes) async {
+    if (_currentFridgeId == null) return {};
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$baseUrl/recognize?fridge_id=$_currentFridgeId'),
+    );
+    request.headers.addAll({'Authorization': 'Bearer $_token'});
+    request.files.add(http.MultipartFile.fromBytes('file', imageBytes, filename: 'image.jpg'));
+    final response = await request.send();
+    final body = await response.stream.bytesToString();
+    return jsonDecode(body);
+  }
+
+  // 영수증 인식
+  static Future<Map<String, dynamic>> recognizeReceipt(List<int> imageBytes) async {
+    if (_currentFridgeId == null) return {};
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$baseUrl/recognize/receipt?fridge_id=$_currentFridgeId'),
+    );
+    request.headers.addAll({'Authorization': 'Bearer $_token'});
+    request.files.add(http.MultipartFile.fromBytes('file', imageBytes, filename: 'image.jpg'));
+    final response = await request.send();
+    final body = await response.stream.bytesToString();
+    return jsonDecode(body);
+  }
+
+  // 스크린샷 인식
+  static Future<Map<String, dynamic>> recognizeScreenshot(List<int> imageBytes) async {
+    if (_currentFridgeId == null) return {};
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$baseUrl/recognize/screenshot?fridge_id=$_currentFridgeId'),
+    );
+    request.headers.addAll({'Authorization': 'Bearer $_token'});
+    request.files.add(http.MultipartFile.fromBytes('file', imageBytes, filename: 'image.jpg'));
+    final response = await request.send();
+    final body = await response.stream.bytesToString();
+    return jsonDecode(body);
+  }
+
   // 재료 수정
-  static Future<bool> updateIngredient(
-    int id, {
+  static Future<bool> updateIngredient(int id, {
     String? name,
     int? consumeDays,
     int? price,
     String? location,
   }) async {
-    final body = <String, dynamic>{};
-    if (name != null) body['name'] = name;
-    if (consumeDays != null) body['consume_days'] = consumeDays;
-    if (price != null) body['price'] = price;
-    if (location != null) body['location'] = location;
-
     final response = await http.put(
       Uri.parse('$baseUrl/ingredients/$id'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(body),
+      headers: _headers,
+      body: jsonEncode({
+        if (name != null) 'name': name,
+        if (consumeDays != null) 'consume_days': consumeDays,
+        if (price != null) 'price': price,
+        if (location != null) 'location': location,
+      }),
     );
     return response.statusCode == 200;
   }
 
-  // 유통기한 임박 재료
+  // 재료 삭제
+  static Future<bool> deleteIngredient(int id, {bool deleteHistory = false}) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/ingredients/$id?delete_history=$deleteHistory'),
+      headers: _headers,
+    );
+    return response.statusCode == 200;
+  }
+
+  // 임박 재료
   static Future<Map<String, dynamic>> getExpiringIngredients() async {
-    final response = await http.get(Uri.parse('$baseUrl/ingredients/expiring?days=7'));
+    final response = await http.get(
+      Uri.parse('$baseUrl/ingredients/expiring'),
+      headers: _headers,
+    );
     if (response.statusCode == 200) {
       return jsonDecode(utf8.decode(response.bodyBytes));
     }
@@ -68,105 +218,18 @@ class ApiService {
 
   // 레시피 추천
   static Future<List<dynamic>> getRecipes() async {
-    final response = await http.get(Uri.parse('$baseUrl/recipes'));
+    final response = await http.get(Uri.parse('$baseUrl/recipes'), headers: _headers);
     if (response.statusCode == 200) {
-      final data = jsonDecode(utf8.decode(response.bodyBytes));
-      return data['recipes'];
+      return jsonDecode(utf8.decode(response.bodyBytes))['recipes'] ?? [];
     }
     return [];
   }
 
-  // 수동 재료 등록
-  static Future<bool> createIngredient(
-    String name,
-    int? expiryDays,
-    int consumeDays,
-    int price,
-    String location,
-  ) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/ingredients'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'name': name,
-        'expiry_days': expiryDays,
-        'consume_days': consumeDays,
-        'price': price,
-        'location': location,
-      }),
-    );
-    return response.statusCode == 200;
-  }
-
-  // 월별 가계부
-  static Future<Map<String, dynamic>> getMonthlyExpenses(int year, int month) async {
-    final response = await http.get(Uri.parse('$baseUrl/expenses/monthly?year=$year&month=$month'));
-    if (response.statusCode == 200) {
-      return jsonDecode(utf8.decode(response.bodyBytes));
-    }
-    return {};
-  }
-
-  // 통계
-  static Future<Map<String, dynamic>> getStatistics() async {
-    final response = await http.get(Uri.parse('$baseUrl/statistics'));
-    if (response.statusCode == 200) {
-      return jsonDecode(utf8.decode(response.bodyBytes));
-    }
-    return {};
-  }
-
-  // 쇼핑리스트 조회
-  static Future<List<dynamic>> getShoppingList() async {
-    final response = await http.get(Uri.parse('$baseUrl/shopping'));
-    if (response.statusCode == 200) {
-      final data = jsonDecode(utf8.decode(response.bodyBytes));
-      return data['shopping_list'];
-    }
-    return [];
-  }
-
-  // 구매 완료
-  static Future<bool> markPurchased(int id) async {
-    final response = await http.put(Uri.parse('$baseUrl/shopping/$id/purchased'));
-    return response.statusCode == 200;
-  }
-
-  // 쇼핑 아이템 삭제
-  static Future<bool> deleteShoppingItem(int id) async {
-    final response = await http.delete(Uri.parse('$baseUrl/shopping/$id'));
-    return response.statusCode == 200;
-  }
-
-  // 영수증 인식
-  static Future<Map<String, dynamic>> recognizeReceiptWithMessage(Uint8List imageBytes) async {
-    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/recognize/receipt'));
-    request.files.add(http.MultipartFile.fromBytes('file', imageBytes, filename: 'image.jpg'));
-    final response = await request.send();
-    final body = await response.stream.bytesToString();
-    if (response.statusCode == 200) {
-      return jsonDecode(body);
-    }
-    return {'ingredients': [], 'message': null};
-  }
-
-  // 스크린샷 인식
-  static Future<Map<String, dynamic>> recognizeScreenshotWithMessage(Uint8List imageBytes) async {
-    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/recognize/screenshot'));
-    request.files.add(http.MultipartFile.fromBytes('file', imageBytes, filename: 'image.jpg'));
-    final response = await request.send();
-    final body = await response.stream.bytesToString();
-    if (response.statusCode == 200) {
-      return jsonDecode(body);
-    }
-    return {'ingredients': [], 'message': null};
-  }
-
-    // 레시피 채팅
+  // 레시피 채팅
   static Future<Map<String, dynamic>> recipeChat(String message) async {
     final response = await http.post(
       Uri.parse('$baseUrl/recipe/chat'),
-      headers: {'Content-Type': 'application/json'},
+      headers: _headers,
       body: jsonEncode({'message': message}),
     );
     if (response.statusCode == 200) {
@@ -175,31 +238,93 @@ class ApiService {
     return {'response': '오류가 발생했어요', 'recipes': []};
   }
 
-  // 월별 가계부 히스토리
-  static Future<Map<String, dynamic>> getExpenseHistory() async {
-    final response = await http.get(Uri.parse('$baseUrl/expenses/history'));
+  // 쇼핑 목록
+  static Future<List<dynamic>> getShoppingList() async {
+    if (_currentFridgeId == null) return [];
+    final response = await http.get(
+      Uri.parse('$baseUrl/shopping?fridge_id=$_currentFridgeId'),
+      headers: _headers,
+    );
     if (response.statusCode == 200) {
-      return jsonDecode(utf8.decode(response.bodyBytes));
+      return jsonDecode(utf8.decode(response.bodyBytes))['shopping_list'];
     }
-    return {};
+    return [];
   }
 
- // 쇼핑 예상 가격
+  // 쇼핑 아이템 추가
+  static Future<bool> addShoppingItem(String name, String quantity) async {
+    if (_currentFridgeId == null) return false;
+    final response = await http.post(
+      Uri.parse('$baseUrl/shopping?fridge_id=$_currentFridgeId'),
+      headers: _headers,
+      body: jsonEncode({'name': name, 'quantity': quantity}),
+    );
+    return response.statusCode == 200;
+  }
+
+  // 쇼핑 구매 완료
+  static Future<bool> markPurchased(int id) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/shopping/$id/purchased'),
+      headers: _headers,
+    );
+    return response.statusCode == 200;
+  }
+
+  // 쇼핑 아이템 삭제
+  static Future<bool> deleteShoppingItem(int id) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/shopping/$id'),
+      headers: _headers,
+    );
+    return response.statusCode == 200;
+  }
+
+  // 쇼핑 예상 가격
   static Future<Map<String, dynamic>> estimateShoppingPrice() async {
-    final response = await http.get(Uri.parse('$baseUrl/shopping/estimate'));
+    final response = await http.get(
+      Uri.parse('$baseUrl/shopping/estimate'),
+      headers: _headers,
+    );
     if (response.statusCode == 200) {
       return jsonDecode(utf8.decode(response.bodyBytes));
     }
     return {'items': [], 'total': 0};
   }
 
-    // 쇼핑 아이템 추가
-  static Future<bool> addShoppingItem(String name, String quantity) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/shopping'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'name': name, 'quantity': quantity}),
+  // 월별 가계부
+  static Future<Map<String, dynamic>> getMonthlyExpenses(int year, int month) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/expenses/monthly?year=$year&month=$month'),
+      headers: _headers,
     );
-    return response.statusCode == 200;
+    if (response.statusCode == 200) {
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    }
+    return {};
+  }
+
+  // 월별 가계부 히스토리
+  static Future<Map<String, dynamic>> getExpenseHistory() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/expenses/history'),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    }
+    return {};
+  }
+
+  // 통계
+  static Future<Map<String, dynamic>> getStatistics() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/statistics'),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    }
+    return {};
   }
 }

@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'screens/home_screen.dart';
 import 'screens/add_screen.dart';
 import 'screens/recipe_screen.dart';
 import 'screens/shopping_screen.dart';
 import 'screens/statistics_screen.dart';
+import 'screens/login_screen.dart';
+import 'screens/fridge_select_screen.dart';
 import 'splash_screen.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'notification_service.dart';
+import 'api_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   await NotificationService.initialize();
+  await ApiService.init();
   runApp(const MyApp());
 }
 
@@ -42,9 +45,24 @@ class MyApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => const SplashScreen(),
-        '/home': (context) => const MainScreen(),
+        '/home': (context) => const AuthWrapper(),
       },
     );
+  }
+}
+
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!ApiService.isLoggedIn) {
+      return const LoginScreen();
+    }
+    if (ApiService.currentFridgeId == null) {
+      return const FridgeSelectScreen();
+    }
+    return const MainScreen();
   }
 }
 

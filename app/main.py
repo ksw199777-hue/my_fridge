@@ -3,12 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 from datetime import date, timedelta
-from app.database import get_db, create_tables, Ingredient, ShoppingItem, PurchaseHistory
 from app.ai import recognize_ingredients, recommend_recipes, recognize_from_screenshot, recognize_expiry_date, recognize_receipt, chat_recipe, estimate_price
 from pydantic import BaseModel
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-
+from app.auth import hash_password, verify_password, create_access_token, get_current_user, require_user
+from app.database import get_db, create_tables, Ingredient, ShoppingItem, PurchaseHistory, User, Fridge, FridgeMember
+import random
+import string
 
 load_dotenv()
 
@@ -63,7 +65,7 @@ def root():
     return {"message": "나만의 냉장고 API 시작!"}
 
 @app.post("/recognize")
-async def recognize(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def recognize(file: UploadFile = File(...), fridge_id: int = None, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
     image_bytes = await file.read()
     ingredients = recognize_ingredients(image_bytes)
     saved = []
@@ -100,7 +102,7 @@ async def recognize(file: UploadFile = File(...), db: Session = Depends(get_db))
     }
 
 @app.post("/recognize/screenshot")
-async def recognize_screenshot(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def recognize(file: UploadFile = File(...), fridge_id: int = None, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
     image_bytes = await file.read()
     ingredients = recognize_from_screenshot(image_bytes)
     saved = []
@@ -136,7 +138,7 @@ async def recognize_screenshot(file: UploadFile = File(...), db: Session = Depen
     }
 
 @app.post("/recognize/receipt")
-async def recognize_receipt_api(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def recognize(file: UploadFile = File(...), fridge_id: int = None, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
     image_bytes = await file.read()
     ingredients = recognize_receipt(image_bytes)
     saved = []
@@ -172,8 +174,22 @@ async def recognize_receipt_api(file: UploadFile = File(...), db: Session = Depe
     }
 
 @app.get("/ingredients")
-def get_ingredients(db: Session = Depends(get_db)):
-    ingredients = db.query(Ingredient).all()
+def get_ingredients(
+    fridge_id: int = None,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    query = db.query(Ingredient)
+    if fridge_id:
+        query = query.filter(Ingredient.fridge_id == fridge_id)
+    else:
+        # 내 모든 냉장고 재료
+        owned_fridge_ids = [f.id for f in db.query(Fridge).filter(Fridge.owner_id == current_user.id).all()]
+        member_fridge_ids = [m.fridge_id for m in db.query(FridgeMember).filter(FridgeMember.user_id == current_user.id).all()]
+        all_fridge_ids = owned_fridge_ids + member_fridge_ids
+        query = query.filter(Ingredient.fridge_id.in_(all_fridge_ids))
+    
+    ingredients = query.all()
     return {"ingredients": [
         {
             "id": i.id,
@@ -184,6 +200,7 @@ def get_ingredients(db: Session = Depends(get_db)):
             "has_expiry_label": i.has_expiry_label,
             "price": i.price,
             "location": i.location,
+            "fridge_id": i.fridge_id,
             "d_day": (i.consume_date - date.today()).days
         }
         for i in ingredients
@@ -264,7 +281,7 @@ class IngredientCreate(BaseModel):
     has_expiry_label: bool = False
 
 @app.post("/ingredients")
-def create_ingredient(item: IngredientCreate, db: Session = Depends(get_db)):
+def create_ingredient(item: IngredientCreate, fridge_id: int, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
     ingredient = Ingredient(
         name=item.name,
         registered_date=date.today(),
@@ -272,7 +289,8 @@ def create_ingredient(item: IngredientCreate, db: Session = Depends(get_db)):
         consume_date=date.today() + timedelta(days=item.consume_days),
         has_expiry_label=1 if item.has_expiry_label else 0,
         price=item.price,
-        location=item.location
+        location=item.location,
+        fridge_id=fridge_id
     )
     db.add(ingredient)
     db.commit()
@@ -286,9 +304,9 @@ def create_ingredient(item: IngredientCreate, db: Session = Depends(get_db)):
         "consume_date": ingredient.consume_date,
         "has_expiry_label": ingredient.has_expiry_label,
         "price": ingredient.price,
-        "location": ingredient.location
+        "location": ingredient.location,
+        "fridge_id": ingredient.fridge_id
     }
-
 class IngredientUpdate(BaseModel):
     name: str = None
     expiry_days: int = None
@@ -350,20 +368,24 @@ class ShoppingItemCreate(BaseModel):
     quantity: str = "1개"
 
 @app.post("/shopping")
-def add_shopping_item(item: ShoppingItemCreate, db: Session = Depends(get_db)):
+def add_shopping_item(item: ShoppingItemCreate, fridge_id: int = None, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
     shopping_item = ShoppingItem(
         name=item.name,
         quantity=item.quantity,
-        created_date=date.today()
+        created_date=date.today(),
+        fridge_id=fridge_id
     )
     db.add(shopping_item)
     db.commit()
     db.refresh(shopping_item)
-    return {"id": shopping_item.id, "name": shopping_item.name, "quantity": shopping_item.quantity, "is_purchased": shopping_item.is_purchased}
+    return {"id": shopping_item.id, "name": shopping_item.name, "quantity": shopping_item.quantity, "is_purchased": shopping_item.is_purchased}: shopping_item.is_purchased}
 
 @app.get("/shopping")
-def get_shopping_list(db: Session = Depends(get_db)):
-    items = db.query(ShoppingItem).filter(ShoppingItem.is_purchased == 0).all()
+def get_shopping_list(fridge_id: int = None, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+    query = db.query(ShoppingItem).filter(ShoppingItem.is_purchased == 0)
+    if fridge_id:
+        query = query.filter(ShoppingItem.fridge_id == fridge_id)
+    items = query.all()
     return {"shopping_list": [
         {"id": i.id, "name": i.name, "quantity": i.quantity}
         for i in items
@@ -490,3 +512,115 @@ def estimate_shopping_price(db: Session = Depends(get_db)):
     item_list = [{"name": i.name, "quantity": i.quantity} for i in items]
     result = estimate_price(item_list)
     return result
+
+# 회원가입/로그인 모델
+class UserRegister(BaseModel):
+    email: str
+    username: str
+    password: str
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+# 냉장고 생성 모델
+class FridgeCreate(BaseModel):
+    name: str
+
+def generate_invite_code():
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+
+@app.post("/auth/register")
+def register(user: UserRegister, db: Session = Depends(get_db)):
+    # 이메일 중복 체크
+    existing = db.query(User).filter(User.email == user.email).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="이미 사용중인 이메일이에요")
+    
+    new_user = User(
+        email=user.email,
+        username=user.username,
+        password_hash=hash_password(user.password),
+        created_date=date.today()
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    
+    # 기본 냉장고 자동 생성
+    fridge = Fridge(
+        name="우리집 냉장고",
+        invite_code=generate_invite_code(),
+        owner_id=new_user.id,
+        created_date=date.today()
+    )
+    db.add(fridge)
+    db.commit()
+    
+    token = create_access_token(new_user.id)
+    return {
+        "token": token,
+        "user": {"id": new_user.id, "email": new_user.email, "username": new_user.username}
+    }
+
+@app.post("/auth/login")
+def login(user: UserLogin, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.email == user.email).first()
+    if not db_user or not verify_password(user.password, db_user.password_hash):
+        raise HTTPException(status_code=401, detail="이메일 또는 비밀번호가 틀렸어요")
+    
+    token = create_access_token(db_user.id)
+    return {
+        "token": token,
+        "user": {"id": db_user.id, "email": db_user.email, "username": db_user.username}
+    }
+
+@app.get("/auth/me")
+def get_me(current_user: User = Depends(require_user)):
+    return {"id": current_user.id, "email": current_user.email, "username": current_user.username}
+
+# 냉장고 관련 API
+@app.post("/fridges")
+def create_fridge(fridge: FridgeCreate, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+    new_fridge = Fridge(
+        name=fridge.name,
+        invite_code=generate_invite_code(),
+        owner_id=current_user.id,
+        created_date=date.today()
+    )
+    db.add(new_fridge)
+    db.commit()
+    db.refresh(new_fridge)
+    return {"id": new_fridge.id, "name": new_fridge.name, "invite_code": new_fridge.invite_code}
+
+@app.get("/fridges")
+def get_fridges(current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+    # 내가 만든 냉장고 + 초대받은 냉장고
+    owned = db.query(Fridge).filter(Fridge.owner_id == current_user.id).all()
+    member_fridge_ids = [m.fridge_id for m in db.query(FridgeMember).filter(FridgeMember.user_id == current_user.id).all()]
+    shared = db.query(Fridge).filter(Fridge.id.in_(member_fridge_ids)).all()
+    
+    all_fridges = owned + shared
+    return {"fridges": [
+        {"id": f.id, "name": f.name, "invite_code": f.invite_code, "is_owner": f.owner_id == current_user.id}
+        for f in all_fridges
+    ]}
+
+@app.post("/fridges/join")
+def join_fridge(invite_code: str, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+    fridge = db.query(Fridge).filter(Fridge.invite_code == invite_code).first()
+    if not fridge:
+        raise HTTPException(status_code=404, detail="초대 코드가 올바르지 않아요")
+    
+    # 이미 멤버인지 체크
+    existing = db.query(FridgeMember).filter(
+        FridgeMember.fridge_id == fridge.id,
+        FridgeMember.user_id == current_user.id
+    ).first()
+    if existing or fridge.owner_id == current_user.id:
+        raise HTTPException(status_code=400, detail="이미 참여중인 냉장고예요")
+    
+    member = FridgeMember(fridge_id=fridge.id, user_id=current_user.id)
+    db.add(member)
+    db.commit()
+    return {"message": f"{fridge.name}에 참여했어요!"}

@@ -29,11 +29,11 @@ class _AddScreenState extends State<AddScreen> {
 
     Map<String, dynamic> result = {};
     if (type == 'ingredient') {
-      result = await ApiService.recognizeIngredientWithMessage(bytes);
+      result = await ApiService.recognizeIngredients(bytes);
     } else if (type == 'receipt') {
-      result = await ApiService.recognizeReceiptWithMessage(bytes);
+      result = await ApiService.recognizeReceipt(bytes);
     } else if (type == 'screenshot') {
-      result = await ApiService.recognizeScreenshotWithMessage(bytes);
+      result = await ApiService.recognizeScreenshot(bytes);
     }
 
     setState(() {
@@ -106,12 +106,12 @@ class _AddScreenState extends State<AddScreen> {
     }
 
     setState(() => _isLoading = true);
-    final success = await ApiService.createIngredient(
-      _nameController.text,
-      _expiryController.text.isNotEmpty ? int.parse(_expiryController.text) : null,
-      int.parse(_consumeController.text),
-      int.tryParse(_priceController.text) ?? 0,
-      _selectedLocation,
+    final success = await ApiService.addIngredient(
+      name: _nameController.text,
+      expiryDays: _expiryController.text.isNotEmpty ? int.parse(_expiryController.text) : null,
+      consumeDays: int.parse(_consumeController.text),
+      price: int.tryParse(_priceController.text) ?? 0,
+      location: _selectedLocation,
     );
     setState(() => _isLoading = false);
 
