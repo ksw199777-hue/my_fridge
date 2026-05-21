@@ -6,8 +6,13 @@ import 'screens/recipe_screen.dart';
 import 'screens/shopping_screen.dart';
 import 'screens/statistics_screen.dart';
 import 'splash_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'notification_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  await NotificationService.initialize();
   runApp(const MyApp());
 }
 
