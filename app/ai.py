@@ -66,7 +66,7 @@ def recommend_recipes(ingredients: list) -> list:
     ingredient_names = ", ".join([i.name for i in ingredients])
     
     message = client.messages.create(
-        model=model="claude-haiku-4-5-20251001",
+        model="claude-haiku-4-5-20251001",
         max_tokens=2048,
         messages=[
             {
@@ -263,7 +263,7 @@ def recognize_receipt(image_bytes: bytes) -> list:
 
 def chat_recipe(message: str, ingredient_names: str) -> dict:
     message_response = client.messages.create(
-        model=model="claude-haiku-4-5-20251001",
+        model="claude-haiku-4-5-20251001",
         max_tokens=2048,
         messages=[
             {
@@ -318,7 +318,7 @@ def estimate_price(items: list) -> dict:
     item_names = ", ".join([f"{item['name']} {item['quantity']}" for item in items])
     
     message = client.messages.create(
-        model=model="claude-haiku-4-5-20251001",
+        model="claude-haiku-4-5-20251001",
         max_tokens=1024,
         messages=[
             {
