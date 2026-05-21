@@ -12,6 +12,8 @@ class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _ingredients = [];
   bool _isLoading = true;
   String _selectedLocation = '전체';
+  bool _isSelectionMode = false;
+  Set<int> _selectedIds = {};
 
   final List<Color> _avatarColors = [
     const Color(0xFF4A90D9),
@@ -52,12 +54,10 @@ class _HomeScreenState extends State<HomeScreen> {
     filtered.sort((a, b) {
       int dDayA = a['d_day'] as int;
       int dDayB = b['d_day'] as int;
-
       if (dDayA < 0 && dDayB >= 0) return -1;
       if (dDayA >= 0 && dDayB < 0) return 1;
       if (dDayA <= 3 && dDayB > 3) return -1;
       if (dDayA > 3 && dDayB <= 3) return 1;
-
       return (b['id'] as int).compareTo(a['id'] as int);
     });
 
@@ -92,11 +92,70 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _toggleSelectionMode() {
+    setState(() {
+      _isSelectionMode = !_isSelectionMode;
+      _selectedIds.clear();
+    });
+  }
+
+  void _toggleSelect(int id) {
+    setState(() {
+      if (_selectedIds.contains(id)) {
+        _selectedIds.remove(id);
+      } else {
+        _selectedIds.add(id);
+      }
+    });
+  }
+
+  void _selectAll() {
+    setState(() {
+      if (_selectedIds.length == _filteredIngredients.length) {
+        _selectedIds.clear();
+      } else {
+        _selectedIds = _filteredIngredients.map((i) => i['id'] as int).toSet();
+      }
+    });
+  }
+
+  Future<void> _deleteSelected() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('재료 삭제'),
+        content: Text('선택한 ${_selectedIds.length}개 재료를 삭제할까요?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('삭제', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      for (final id in _selectedIds) {
+        await ApiService.deleteIngredient(id);
+      }
+      setState(() {
+        _isSelectionMode = false;
+        _selectedIds.clear();
+      });
+      _loadIngredients();
+    }
+  }
+
   void _showIngredientDetail(dynamic item) {
     final dDay = item['d_day'] as int;
     final isExpired = dDay < 0;
     final nameController = TextEditingController(text: item['name']);
-    final consumeController = TextEditingController(text: '');
+    final consumeController = TextEditingController();
     final priceController = TextEditingController(text: '${item['price']}');
     String selectedLocation = item['location'];
 
@@ -127,8 +186,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // 만료 경고
                 if (isExpired)
                   Container(
                     width: double.infinity,
@@ -151,13 +208,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                   ),
-
                 if (isExpired) const SizedBox(height: 12),
-
-                Text(
-                  item['name'],
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
+                Text(item['name'],
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
                 Text(
                   item['expiry_date'] != null
@@ -168,8 +221,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 16),
                 const Divider(),
                 const SizedBox(height: 8),
-
-                // 수정 폼
                 const Text('✏️ 수정하기',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 12),
@@ -210,12 +261,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     prefixIcon: Icon(Icons.location_on, color: Color(0xFFDDA0DD)),
                   ),
                   items: ['냉장', '냉동', '실온'].map((loc) =>
-                    DropdownMenuItem(value: loc, child: Text(loc))).toList(),
+                      DropdownMenuItem(value: loc, child: Text(loc))).toList(),
                   onChanged: (val) => setModalState(() => selectedLocation = val!),
                 ),
                 const SizedBox(height: 16),
-
-                // 수정 버튼
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -236,15 +285,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       backgroundColor: const Color(0xFF4A90D9),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: const Text('수정 완료', style: TextStyle(fontSize: 16)),
                   ),
                 ),
                 const SizedBox(height: 8),
-
-                // 삭제 버튼
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
@@ -252,8 +298,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       final confirm = await showDialog<bool>(
                         context: context,
                         builder: (context) => AlertDialog(
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           title: const Text('재료 삭제'),
                           content: Text('${item['name']}을(를) 삭제할까요?'),
                           actions: [
@@ -263,8 +308,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(context, true),
-                              child: const Text('삭제',
-                                  style: TextStyle(color: Colors.red)),
+                              child: const Text('삭제', style: TextStyle(color: Colors.red)),
                             ),
                           ],
                         ),
@@ -279,8 +323,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       foregroundColor: Colors.red,
                       side: const BorderSide(color: Colors.red),
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: Text(
                       isExpired ? '🗑️ 폐기 완료 - 삭제하기' : '삭제하기',
@@ -302,21 +345,46 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Row(
-          children: [
-            Text('🧊', style: TextStyle(fontSize: 24)),
-            SizedBox(width: 8),
-            Text('나만의 냉장고',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-          ],
-        ),
+        title: _isSelectionMode
+            ? Text('${_selectedIds.length}개 선택됨',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20))
+            : const Row(
+                children: [
+                  Text('🧊', style: TextStyle(fontSize: 24)),
+                  SizedBox(width: 8),
+                  Text('나만의 냉장고',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+                ],
+              ),
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Color(0xFF4A90D9)),
-            onPressed: _loadIngredients,
-          ),
+          if (_isSelectionMode) ...[
+            TextButton(
+              onPressed: _selectAll,
+              child: Text(
+                _selectedIds.length == _filteredIngredients.length ? '전체 해제' : '전체 선택',
+                style: const TextStyle(color: Color(0xFF4A90D9)),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red),
+              onPressed: _selectedIds.isEmpty ? null : _deleteSelected,
+            ),
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: _toggleSelectionMode,
+            ),
+          ] else ...[
+            IconButton(
+              icon: const Icon(Icons.checklist, color: Color(0xFF4A90D9)),
+              onPressed: _toggleSelectionMode,
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Color(0xFF4A90D9)),
+              onPressed: _loadIngredients,
+            ),
+          ],
         ],
       ),
       body: _isLoading
@@ -406,27 +474,51 @@ class _HomeScreenState extends State<HomeScreen> {
                               final item = _filteredIngredients[index];
                               final dDay = item['d_day'] as int;
                               final avatarColor = _getAvatarColor(item['name']);
+                              final isSelected = _selectedIds.contains(item['id'] as int);
                               return GestureDetector(
-                                onTap: () => _showIngredientDetail(item),
+                                onTap: () {
+                                  if (_isSelectionMode) {
+                                    _toggleSelect(item['id'] as int);
+                                  } else {
+                                    _showIngredientDetail(item);
+                                  }
+                                },
+                                onLongPress: () {
+                                  if (!_isSelectionMode) {
+                                    _toggleSelectionMode();
+                                    _toggleSelect(item['id'] as int);
+                                  }
+                                },
                                 child: Card(
                                   margin: const EdgeInsets.only(bottom: 10),
-                                  color: _getCardColor(dDay),
+                                  color: isSelected
+                                      ? const Color(0xFFE3F0FF)
+                                      : _getCardColor(dDay),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
+                                    side: isSelected
+                                        ? const BorderSide(color: Color(0xFF4A90D9), width: 2)
+                                        : BorderSide.none,
                                   ),
                                   child: ListTile(
                                     contentPadding: const EdgeInsets.symmetric(
                                         horizontal: 16, vertical: 8),
-                                    leading: CircleAvatar(
-                                      backgroundColor: avatarColor.withOpacity(0.2),
-                                      child: Text(
-                                        item['name'][0],
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: avatarColor,
-                                            fontSize: 18),
-                                      ),
-                                    ),
+                                    leading: _isSelectionMode
+                                        ? Checkbox(
+                                            value: isSelected,
+                                            onChanged: (_) => _toggleSelect(item['id'] as int),
+                                            activeColor: const Color(0xFF4A90D9),
+                                          )
+                                        : CircleAvatar(
+                                            backgroundColor: avatarColor.withOpacity(0.2),
+                                            child: Text(
+                                              item['name'][0],
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: avatarColor,
+                                                  fontSize: 18),
+                                            ),
+                                          ),
                                     title: Text(
                                       item['name'],
                                       style: const TextStyle(
