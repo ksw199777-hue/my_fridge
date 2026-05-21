@@ -6,6 +6,8 @@ from datetime import date, timedelta
 from app.database import get_db, create_tables, Ingredient, ShoppingItem
 from app.ai import recognize_ingredients, recommend_recipes, recognize_from_screenshot, recognize_expiry_date, recognize_receipt
 from pydantic import BaseModel
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 load_dotenv()
 
@@ -22,6 +24,9 @@ app.add_middleware(
 @app.on_event("startup")
 def startup():
     create_tables()
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(check_expiry, CronTrigger(hour=9, minute=0))
+    scheduler.start()
 
 @app.get("/")
 def root():
@@ -422,3 +427,28 @@ def get_statistics(db: Session = Depends(get_db)):
         "by_location": by_location,
         "saved_value": saved_value
     }
+
+def check_expiry():
+    from app.database import SessionLocal
+    db = SessionLocal()
+    today = date.today()
+    
+    # 3일 이내 임박 재료
+    expiring = db.query(Ingredient).filter(
+        Ingredient.consume_date <= today + timedelta(days=3),
+        Ingredient.consume_date >= today
+    ).all()
+    
+    # 만료된 재료
+    expired = db.query(Ingredient).filter(
+        Ingredient.consume_date < today
+    ).all()
+    
+    for i in expiring:
+        dday = (i.consume_date - today).days
+        print(f"⚠️ 임박: {i.name} D-{dday}")
+    
+    for i in expired:
+        print(f"❌ 만료: {i.name}")
+    
+    db.close()
