@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../api_service.dart';
+import 'fridge_select_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -402,6 +403,15 @@ void _showIngredientDetail(dynamic item) {
             ),
           ] else ...[
             IconButton(
+              icon: const Icon(Icons.kitchen, color: Color(0xFF4A90D9)),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const FridgeSelectScreen()),
+                );
+              },
+            ),
+            IconButton(
               icon: const Icon(Icons.checklist, color: Color(0xFF4A90D9)),
               onPressed: _toggleSelectionMode,
             ),
@@ -410,8 +420,6 @@ void _showIngredientDetail(dynamic item) {
               onPressed: _loadIngredients,
             ),
           ],
-        ],
-      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
