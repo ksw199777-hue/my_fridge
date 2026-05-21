@@ -3,9 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 from datetime import date, timedelta
-from app.database import get_db, create_tables, Ingredient, ShoppingItem
-from app.ai import recognize_ingredients, recommend_recipes, recognize_from_screenshot, recognize_expiry_date, recognize_receipt
+from app.database import get_db, create_tables, Ingredient, ShoppingItem, PurchaseHistory
+from app.ai import recognize_ingredients, recommend_recipes, recognize_from_screenshot, recognize_expiry_date, recognize_receipt, chat_recipe, estimate_price
 from pydantic import BaseModel
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+
 
 load_dotenv()
 
@@ -19,9 +22,41 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+def save_purchase_history(db: Session, ingredient: Ingredient):
+    if ingredient.price > 0:
+        history = PurchaseHistory(
+            name=ingredient.name,
+            price=ingredient.price,
+            location=ingredient.location,
+            purchased_date=date.today()
+        )
+        db.add(history)
+        db.commit()
+
+def check_expiry():
+    from app.database import SessionLocal
+    db = SessionLocal()
+    today = date.today()
+    expiring = db.query(Ingredient).filter(
+        Ingredient.consume_date <= today + timedelta(days=3),
+        Ingredient.consume_date >= today
+    ).all()
+    expired = db.query(Ingredient).filter(
+        Ingredient.consume_date < today
+    ).all()
+    for i in expiring:
+        dday = (i.consume_date - today).days
+        print(f"⚠️ 임박: {i.name} D-{dday}")
+    for i in expired:
+        print(f"❌ 만료: {i.name}")
+    db.close()
+
 @app.on_event("startup")
 def startup():
     create_tables()
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(check_expiry, CronTrigger(hour=9, minute=0))
+    scheduler.start()
 
 @app.get("/")
 def root():
@@ -31,13 +66,11 @@ def root():
 async def recognize(file: UploadFile = File(...), db: Session = Depends(get_db)):
     image_bytes = await file.read()
     ingredients = recognize_ingredients(image_bytes)
-    
     saved = []
     for item in ingredients:
         expiry_days = item.get("expiry_days")
         consume_days = item.get("consume_days") or 7
         has_expiry_label = item.get("has_expiry_label", False)
-
         ingredient = Ingredient(
             name=item["name"],
             registered_date=date.today(),
@@ -50,6 +83,7 @@ async def recognize(file: UploadFile = File(...), db: Session = Depends(get_db))
         db.add(ingredient)
         db.commit()
         db.refresh(ingredient)
+        save_purchase_history(db, ingredient)
         saved.append({
             "id": ingredient.id,
             "name": ingredient.name,
@@ -60,7 +94,6 @@ async def recognize(file: UploadFile = File(...), db: Session = Depends(get_db))
             "price": ingredient.price,
             "location": ingredient.location
         })
-    
     return {
         "ingredients": saved,
         "message": "유통기한 표시가 없는 재료는 오늘 기준으로 소비기한을 산출했어요! 냉장고 탭에서 수정 가능해요 ✏️"
@@ -70,7 +103,6 @@ async def recognize(file: UploadFile = File(...), db: Session = Depends(get_db))
 async def recognize_screenshot(file: UploadFile = File(...), db: Session = Depends(get_db)):
     image_bytes = await file.read()
     ingredients = recognize_from_screenshot(image_bytes)
-    
     saved = []
     for item in ingredients:
         consume_days = item.get("consume_days") or 7
@@ -86,6 +118,7 @@ async def recognize_screenshot(file: UploadFile = File(...), db: Session = Depen
         db.add(ingredient)
         db.commit()
         db.refresh(ingredient)
+        save_purchase_history(db, ingredient)
         saved.append({
             "id": ingredient.id,
             "name": ingredient.name,
@@ -97,7 +130,6 @@ async def recognize_screenshot(file: UploadFile = File(...), db: Session = Depen
             "price": ingredient.price,
             "location": ingredient.location
         })
-    
     return {
         "ingredients": saved,
         "message": "유통기한 표시가 없어 오늘을 기준으로 소비기한을 산출했어요! 냉장고 탭에서 수정 가능해요 ✏️"
@@ -107,7 +139,6 @@ async def recognize_screenshot(file: UploadFile = File(...), db: Session = Depen
 async def recognize_receipt_api(file: UploadFile = File(...), db: Session = Depends(get_db)):
     image_bytes = await file.read()
     ingredients = recognize_receipt(image_bytes)
-    
     saved = []
     for item in ingredients:
         consume_days = item.get("consume_days") or 7
@@ -123,6 +154,7 @@ async def recognize_receipt_api(file: UploadFile = File(...), db: Session = Depe
         db.add(ingredient)
         db.commit()
         db.refresh(ingredient)
+        save_purchase_history(db, ingredient)
         saved.append({
             "id": ingredient.id,
             "name": ingredient.name,
@@ -134,7 +166,6 @@ async def recognize_receipt_api(file: UploadFile = File(...), db: Session = Depe
             "price": ingredient.price,
             "location": ingredient.location
         })
-    
     return {
         "ingredients": saved,
         "message": "유통기한 표시가 없어 오늘을 기준으로 소비기한을 산출했어요! 냉장고 탭에서 수정 가능해요 ✏️"
@@ -165,11 +196,9 @@ def get_expiring_ingredients(days: int = 3, db: Session = Depends(get_db)):
         Ingredient.consume_date <= today + timedelta(days=days),
         Ingredient.consume_date >= today
     ).all()
-    
     expired = db.query(Ingredient).filter(
         Ingredient.consume_date < today
     ).all()
-    
     return {
         "expiring_soon": [
             {
@@ -200,10 +229,8 @@ def search_ingredients(keyword: str, db: Session = Depends(get_db)):
     ingredients = db.query(Ingredient).filter(
         Ingredient.name.contains(keyword)
     ).all()
-    
     if not ingredients:
         return {"message": f"'{keyword}' 검색 결과가 없어요", "ingredients": []}
-    
     return {"ingredients": [
         {
             "id": i.id,
@@ -250,6 +277,7 @@ def create_ingredient(item: IngredientCreate, db: Session = Depends(get_db)):
     db.add(ingredient)
     db.commit()
     db.refresh(ingredient)
+    save_purchase_history(db, ingredient)
     return {
         "id": ingredient.id,
         "name": ingredient.name,
@@ -307,6 +335,16 @@ def get_recipes(db: Session = Depends(get_db)):
     recipes = recommend_recipes(ingredients)
     return {"recipes": recipes}
 
+class RecipeChatRequest(BaseModel):
+    message: str
+
+@app.post("/recipe/chat")
+async def recipe_chat(request: RecipeChatRequest, db: Session = Depends(get_db)):
+    ingredients = db.query(Ingredient).all()
+    ingredient_names = ", ".join([i.name for i in ingredients]) if ingredients else "없음"
+    response = chat_recipe(request.message, ingredient_names)
+    return {"response": response}
+
 class ShoppingItemCreate(BaseModel):
     name: str
     quantity: int = 1
@@ -352,20 +390,16 @@ def delete_shopping_item(item_id: int, db: Session = Depends(get_db)):
 @app.get("/expenses/monthly")
 def get_monthly_expenses(year: int, month: int, db: Session = Depends(get_db)):
     from sqlalchemy import extract
-    
-    ingredients = db.query(Ingredient).filter(
-        extract('year', Ingredient.registered_date) == year,
-        extract('month', Ingredient.registered_date) == month
+    histories = db.query(PurchaseHistory).filter(
+        extract('year', PurchaseHistory.purchased_date) == year,
+        extract('month', PurchaseHistory.purchased_date) == month
     ).all()
-    
-    total = sum(i.price for i in ingredients)
-    
+    total = sum(i.price for i in histories)
     by_location = {}
-    for i in ingredients:
+    for i in histories:
         if i.location not in by_location:
             by_location[i.location] = 0
         by_location[i.location] += i.price
-    
     return {
         "year": year,
         "month": month,
@@ -376,35 +410,53 @@ def get_monthly_expenses(year: int, month: int, db: Session = Depends(get_db)):
                 "name": i.name,
                 "price": i.price,
                 "location": i.location,
-                "registered_date": i.registered_date
+                "registered_date": i.purchased_date
             }
-            for i in ingredients
+            for i in histories
         ]
+    }
+
+@app.get("/expenses/history")
+def get_expense_history(db: Session = Depends(get_db)):
+    from sqlalchemy import extract, func
+    monthly_data = db.query(
+        extract('year', PurchaseHistory.purchased_date).label('year'),
+        extract('month', PurchaseHistory.purchased_date).label('month'),
+        func.sum(PurchaseHistory.price).label('total')
+    ).group_by('year', 'month').order_by('year', 'month').all()
+    result = []
+    for row in monthly_data:
+        result.append({
+            "year": int(row.year),
+            "month": int(row.month),
+            "total": int(row.total or 0)
+        })
+    if len(result) >= 2:
+        diff = result[-1]['total'] - result[-2]['total']
+    else:
+        diff = 0
+    return {
+        "history": result,
+        "diff_from_last_month": diff
     }
 
 @app.get("/statistics")
 def get_statistics(db: Session = Depends(get_db)):
     today = date.today()
     all_ingredients = db.query(Ingredient).all()
-    
     total_count = len(all_ingredients)
     total_spent = sum(i.price for i in all_ingredients)
-    
     expired = [i for i in all_ingredients if i.consume_date < today]
     expired_count = len(expired)
     expired_value = sum(i.price for i in expired)
-    
     expiring_soon = [i for i in all_ingredients if today <= i.consume_date <= today + timedelta(days=3)]
-    
     by_location = {}
     for i in all_ingredients:
         if i.location not in by_location:
             by_location[i.location] = {"count": 0, "total_price": 0}
         by_location[i.location]["count"] += 1
         by_location[i.location]["total_price"] += i.price
-    
     saved_value = sum(i.price for i in all_ingredients if i.consume_date >= today)
-    
     return {
         "total": {
             "count": total_count,
@@ -422,3 +474,13 @@ def get_statistics(db: Session = Depends(get_db)):
         "by_location": by_location,
         "saved_value": saved_value
     }
+
+@app.get("/shopping/estimate")
+def estimate_shopping_price(db: Session = Depends(get_db)):
+    items = db.query(ShoppingItem).filter(ShoppingItem.is_purchased == 0).all()
+    if not items:
+        return {"message": "쇼핑 목록이 비어있어요!", "items": [], "total": 0}
+    
+    item_list = [{"name": i.name, "quantity": i.quantity} for i in items]
+    result = estimate_price(item_list)
+    return result

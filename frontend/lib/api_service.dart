@@ -169,4 +169,35 @@ class ApiService {
     }
     return {'ingredients': [], 'message': null};
   }
+
+    // 레시피 채팅
+  static Future<Map<String, dynamic>> recipeChat(String message) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/recipe/chat'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'message': message}),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    }
+    return {'response': '오류가 발생했어요', 'recipes': []};
+  }
+
+  // 월별 가계부 히스토리
+  static Future<Map<String, dynamic>> getExpenseHistory() async {
+    final response = await http.get(Uri.parse('$baseUrl/expenses/history'));
+    if (response.statusCode == 200) {
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    }
+    return {};
+  }
+
+ // 쇼핑 예상 가격
+  static Future<Map<String, dynamic>> estimateShoppingPrice() async {
+    final response = await http.get(Uri.parse('$baseUrl/shopping/estimate'));
+    if (response.statusCode == 200) {
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    }
+    return {'items': [], 'total': 0};
+  }
 }
