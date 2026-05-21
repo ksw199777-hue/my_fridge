@@ -378,7 +378,7 @@ def add_shopping_item(item: ShoppingItemCreate, fridge_id: int = None, current_u
     db.add(shopping_item)
     db.commit()
     db.refresh(shopping_item)
-    return {"id": shopping_item.id, "name": shopping_item.name, "quantity": shopping_item.quantity, "is_purchased": shopping_item.is_purchased}: shopping_item.is_purchased}
+    return {"id": shopping_item.id, "name": shopping_item.name, "quantity": shopping_item.quantity, "is_purchased": shopping_item.is_purchased}
 
 @app.get("/shopping")
 def get_shopping_list(fridge_id: int = None, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
