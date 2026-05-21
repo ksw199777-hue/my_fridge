@@ -151,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _showIngredientDetail(dynamic item) {
+void _showIngredientDetail(dynamic item) {
     final dDay = item['d_day'] as int;
     final isExpired = dDay < 0;
     final nameController = TextEditingController(text: item['name']);
@@ -295,26 +295,51 @@ class _HomeScreenState extends State<HomeScreen> {
                   width: double.infinity,
                   child: OutlinedButton(
                     onPressed: () async {
+                      bool deleteHistory = false;
                       final confirm = await showDialog<bool>(
                         context: context,
-                        builder: (context) => AlertDialog(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          title: const Text('재료 삭제'),
-                          content: Text('${item['name']}을(를) 삭제할까요?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text('취소'),
+                        builder: (context) => StatefulBuilder(
+                          builder: (context, setDialogState) => AlertDialog(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            title: const Text('재료 삭제'),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('${item['name']}을(를) 삭제할까요?'),
+                                const SizedBox(height: 16),
+                                RadioListTile<bool>(
+                                  title: const Text('식재료비 유지'),
+                                  subtitle: const Text('가계부 금액은 그대로 남아요'),
+                                  value: false,
+                                  groupValue: deleteHistory,
+                                  onChanged: (val) => setDialogState(() => deleteHistory = val!),
+                                  activeColor: const Color(0xFF4A90D9),
+                                ),
+                                RadioListTile<bool>(
+                                  title: const Text('식재료비도 함께 삭제'),
+                                  subtitle: const Text('가계부에서 금액도 제거돼요'),
+                                  value: true,
+                                  groupValue: deleteHistory,
+                                  onChanged: (val) => setDialogState(() => deleteHistory = val!),
+                                  activeColor: Colors.red,
+                                ),
+                              ],
                             ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              child: const Text('삭제', style: TextStyle(color: Colors.red)),
-                            ),
-                          ],
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('취소'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text('삭제', style: TextStyle(color: Colors.red)),
+                              ),
+                            ],
+                          ),
                         ),
                       );
                       if (confirm == true) {
-                        await ApiService.deleteIngredient(item['id']);
+                        await ApiService.deleteIngredient(item['id'], deleteHistory: deleteHistory);
                         Navigator.pop(context);
                         _loadIngredients();
                       }

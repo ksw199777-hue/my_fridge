@@ -378,14 +378,20 @@ def mark_purchased(item_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": f"{item.name} 구매 완료!"}
 
-@app.delete("/shopping/{item_id}")
-def delete_shopping_item(item_id: int, db: Session = Depends(get_db)):
-    item = db.query(ShoppingItem).filter(ShoppingItem.id == item_id).first()
-    if not item:
-        raise HTTPException(status_code=404, detail="아이템을 찾을 수 없어요")
-    db.delete(item)
+@app.delete("/ingredients/{ingredient_id}")
+def delete_ingredient(ingredient_id: int, delete_history: bool = False, db: Session = Depends(get_db)):
+    ingredient = db.query(Ingredient).filter(Ingredient.id == ingredient_id).first()
+    if not ingredient:
+        raise HTTPException(status_code=404, detail="재료를 찾을 수 없어요")
+    
+    if delete_history:
+        db.query(PurchaseHistory).filter(
+            PurchaseHistory.name == ingredient.name
+        ).delete()
+    
+    db.delete(ingredient)
     db.commit()
-    return {"message": f"{item.name} 삭제됐어요!"}
+    return {"message": f"{ingredient.name} 삭제됐어요!"}
 
 @app.get("/expenses/monthly")
 def get_monthly_expenses(year: int, month: int, db: Session = Depends(get_db)):
