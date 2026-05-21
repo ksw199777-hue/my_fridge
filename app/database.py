@@ -20,7 +20,7 @@ class Ingredient(Base):
     has_expiry_label = Column(Integer, default=0)  # 유통기한 표시 있는지 0/1
     price = Column(Integer, default=0)
     location = Column(String, default="냉장")
-    pythonclass PurchaseHistory(Base):
+class PurchaseHistory(Base):
     __tablename__ = "purchase_history"
 
     id = Column(Integer, primary_key=True, index=True)
