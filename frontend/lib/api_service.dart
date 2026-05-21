@@ -182,4 +182,13 @@ class ApiService {
     }
     return {'response': '오류가 발생했어요', 'recipes': []};
   }
+
+  // 월별 가계부 히스토리
+  static Future<Map<String, dynamic>> getExpenseHistory() async {
+    final response = await http.get(Uri.parse('$baseUrl/expenses/history'));
+    if (response.statusCode == 200) {
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    }
+    return {};
+  }
 }
