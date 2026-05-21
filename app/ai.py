@@ -318,7 +318,7 @@ def estimate_price(items: list) -> dict:
     item_names = ", ".join([f"{item['name']} {item['quantity']}" for item in items])
     
     message = client.messages.create(
-        model="claude-opus-4-5"
+        model="claude-opus-4-5",
         max_tokens=1024,
         messages=[
             {
