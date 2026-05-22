@@ -268,7 +268,10 @@ def chat_recipe(message: str, ingredient_names: str) -> dict:
         messages=[
             {
                 "role": "user",
-                "content": f"""당신은 요리 전문가입니다. 사용자의 냉장고에 있는 재료를 기반으로 요리를 추천해주세요.
+                 "content": f"""당신은 요리 전문가입니다. 오직 요리, 음식, 식재료 관련 질문만 답변하세요.
+                요리와 관련없는 질문이 오면 {{"response": "저는 요리 관련 질문만 답변할 수 있어요! 🍳", "recipes": []}} 만 반환하세요.
+
+                사용자의 냉장고에 있는 재료를 기반으로 요리를 추천해주세요.
 
 현재 냉장고 재료: {ingredient_names}
 
