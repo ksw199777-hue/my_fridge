@@ -13,6 +13,7 @@ import random
 import string
 import firebase_admin
 from firebase_admin import credentials, messaging
+import os
 
 load_dotenv()
 
@@ -630,7 +631,12 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     token = create_access_token(db_user.id)
     return {
         "token": token,
-        "user": {"id": db_user.id, "email": db_user.email, "username": db_user.username}
+        "user": {
+            "id": db_user.id,
+            "email": db_user.email,
+            "username": db_user.username,
+            "subscription_type": db_user.subscription_type
+        }
     }
 
 @app.get("/auth/me")
