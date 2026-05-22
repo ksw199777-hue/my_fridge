@@ -16,7 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   final _usernameController = TextEditingController();
 
-  Future<void> _submit() async {
+Future<void> _submit() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) return;
     setState(() => _isLoading = true);
 
@@ -45,12 +45,11 @@ class _LoginScreenState extends State<LoginScreen> {
           await ApiService.setSubscriptionType(result['user']['subscription_type']);
         }
         if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const FridgeSelectScreen()),
-        );
-      }
-    }
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const FridgeSelectScreen()),
+          );
+        }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -68,7 +67,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = false);
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
