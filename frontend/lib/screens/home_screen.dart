@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../api_service.dart';
 import 'fridge_select_screen.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
-import '../ad_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,7 +15,6 @@ class _HomeScreenState extends State<HomeScreen> {
   String _selectedLocation = '전체';
   bool _isSelectionMode = false;
   Set<int> _selectedIds = {};
-  BannerAd? _bannerAd;
 
   final List<Color> _avatarColors = [
     const Color(0xFF4A90D9),
@@ -39,17 +36,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadIngredients();
-    _loadBannerAd();
-  }
-
-  Future<void> _loadBannerAd() async {
-    _bannerAd = await AdService.loadBannerAd();
-    if (_bannerAd != null) setState(() {});
   }
 
   @override
   void dispose() {
-    AdService.disposeBannerAd();
     super.dispose();
   }
 
@@ -724,9 +714,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-      bottomSheet: _bannerAd != null
-          ? SizedBox(height: 50, child: AdWidget(ad: _bannerAd!))
-          : null,
     );
   }
 }
