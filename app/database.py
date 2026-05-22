@@ -2,8 +2,13 @@ from sqlalchemy import create_engine, Column, Integer, String, Date, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import date
+import os
 
-DATABASE_URL = "sqlite:///./my_fridge.db"
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./my_fridge.db")
+
+# PostgreSQL URL 형식 맞추기 (Railway는 postgres:// 로 시작)
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
