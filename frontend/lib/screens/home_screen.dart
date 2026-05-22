@@ -47,10 +47,16 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  List<dynamic> get _filteredIngredients {
-    List<dynamic> filtered = _selectedLocation == '전체'
-        ? List.from(_ingredients)
-        : _ingredients.where((i) => i['location'] == _selectedLocation).toList();
+List<dynamic> get _filteredIngredients {
+    List<dynamic> filtered;
+    
+    if (_selectedLocation == '전체') {
+      filtered = List.from(_ingredients);
+    } else if (_selectedLocation == '만료') {
+      filtered = _ingredients.where((i) => i['d_day'] < 0).toList();
+    } else {
+      filtered = _ingredients.where((i) => i['location'] == _selectedLocation).toList();
+    }
 
     filtered.sort((a, b) {
       int dDayA = a['d_day'] as int;
@@ -457,7 +463,7 @@ void _showIngredientDetail(dynamic item) {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
-                    children: ['전체', '냉장', '냉동', '실온'].map((location) {
+                    children: ['전체', '냉장', '냉동', '실온', '만료'].map((location) {
                       final isSelected = _selectedLocation == location;
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
