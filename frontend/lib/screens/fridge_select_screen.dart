@@ -168,16 +168,69 @@ class _FridgeSelectScreenState extends State<FridgeSelectScreen> {
                                     color: Colors.grey,
                                   ),
                                 ),
-                          trailing: ElevatedButton(
-                            onPressed: () => _selectFridge(fridge['id']),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF4A90D9),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ElevatedButton(
+                                onPressed: () => _selectFridge(fridge['id']),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF4A90D9),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: const Text('선택'),
                               ),
-                            ),
-                            child: const Text('선택'),
+                              if (fridge['is_owner']) ...[
+                                const SizedBox(width: 4),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () async {
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                        ),
+                                        title: const Text('냉장고 삭제'),
+                                        content: Text(
+                                          '${fridge['name']}을(를) 삭제할까요?\n냉장고 안 재료도 모두 삭제돼요!',
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context, false),
+                                            child: const Text('취소'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context, true),
+                                            child: const Text(
+                                              '삭제',
+                                              style: TextStyle(
+                                                color: Colors.red,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    if (confirm == true) {
+                                      await ApiService.deleteFridge(
+                                        fridge['id'],
+                                      );
+                                      _loadFridges();
+                                    }
+                                  },
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                       ),

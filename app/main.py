@@ -633,3 +633,16 @@ def delete_shopping_item(item_id: int, current_user: User = Depends(require_user
     db.delete(item)
     db.commit()
     return {"message": f"{item.name} 삭제됐어요!"}
+
+@app.delete("/fridges/{fridge_id}")
+def delete_fridge(fridge_id: int, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+    fridge = db.query(Fridge).filter(Fridge.id == fridge_id, Fridge.owner_id == current_user.id).first()
+    if not fridge:
+        raise HTTPException(status_code=404, detail="냉장고를 찾을 수 없어요")
+    
+    # 냉장고 안 재료도 같이 삭제
+    db.query(Ingredient).filter(Ingredient.fridge_id == fridge_id).delete()
+    db.query(ShoppingItem).filter(ShoppingItem.fridge_id == fridge_id).delete()
+    db.delete(fridge)
+    db.commit()
+    return {"message": f"{fridge.name} 삭제됐어요!"}
