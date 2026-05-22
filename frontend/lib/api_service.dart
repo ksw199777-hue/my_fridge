@@ -217,12 +217,14 @@ class ApiService {
   }
 
   // 레시피 추천
-  static Future<List<dynamic>> getRecipes() async {
+  static Future<Map<String, dynamic>> getRecipes() async {
     final response = await http.get(Uri.parse('$baseUrl/recipes'), headers: _headers);
     if (response.statusCode == 200) {
-      return jsonDecode(utf8.decode(response.bodyBytes))['recipes'] ?? [];
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    } else if (response.statusCode == 403) {
+      return {'error': 'premium', 'recipes': []};
     }
-    return [];
+    return {'recipes': []};
   }
 
   // 레시피 채팅
@@ -234,6 +236,8 @@ class ApiService {
     );
     if (response.statusCode == 200) {
       return jsonDecode(utf8.decode(response.bodyBytes));
+    } else if (response.statusCode == 403) {
+      return {'error': 'premium', 'response': '', 'recipes': []};
     }
     return {'response': '오류가 발생했어요', 'recipes': []};
   }
@@ -288,6 +292,8 @@ class ApiService {
     );
     if (response.statusCode == 200) {
       return jsonDecode(utf8.decode(response.bodyBytes));
+    } else if (response.statusCode == 403) {
+      return {'error': 'premium', 'items': [], 'total': 0};
     }
     return {'items': [], 'total': 0};
   }
@@ -336,4 +342,14 @@ class ApiService {
     );
     return response.statusCode == 200;
   }
+
+  // FCM 토큰 저장
+  static Future<void> updateFcmToken(String token) async {
+    await http.post(
+      Uri.parse('$baseUrl/auth/fcm-token'),
+      headers: _headers,
+      body: jsonEncode({'fcm_token': token}),
+    );
+  }
+
 }

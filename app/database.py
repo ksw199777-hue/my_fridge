@@ -24,6 +24,7 @@ class User(Base):
     created_date = Column(Date, default=date.today)
     fcm_token = Column(String, nullable=True)  # 추가
     fridges = relationship("Fridge", back_populates="owner")
+    subscription_type = Column(String, default="free")
 
 class Fridge(Base):
     __tablename__ = "fridges"

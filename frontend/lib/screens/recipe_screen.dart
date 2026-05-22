@@ -36,17 +36,49 @@ class _RecipeScreenState extends State<RecipeScreen>
     super.dispose();
   }
 
-  Future<void> _loadRecipes() async {
-    setState(() => _isLoading = true);
-    final recipes = await ApiService.getRecipes();
-    setState(() {
-      _recipes = recipes;
-      _isLoading = false;
-      _expandedIndex = null;
-    });
+Future<void> _loadRecipes() async {
+  setState(() => _isLoading = true);
+  final result = await ApiService.getRecipes();
+  if (result['error'] == 'premium') {
+    setState(() => _isLoading = false);
+    _showPremiumDialog();
+    return;
   }
+  setState(() {
+    _recipes = result['recipes'] ?? [];
+    _isLoading = false;
+    _expandedIndex = null;
+  });
+}
 
-  Future<void> _sendMessage() async {
+void _showPremiumDialog() {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text('⭐ 프리미엄 기능'),
+      content: const Text('AI 레시피 추천은 프리미엄 구독자만 사용할 수 있어요!\n\n월 3,000원으로 업그레이드하면 AI 레시피 추천, 대화형 채팅, 쇼핑 예상 가격 계산을 모두 사용할 수 있어요 😄'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('닫기'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF4A90D9),
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('업그레이드'),
+        ),
+      ],
+    ),
+  );
+}
+
+Future<void> _sendMessage() async {
     if (_chatController.text.isEmpty) return;
     final message = _chatController.text;
     _chatController.clear();
@@ -59,6 +91,15 @@ class _RecipeScreenState extends State<RecipeScreen>
     _scrollToBottom();
 
     final result = await ApiService.recipeChat(message);
+
+    if (result['error'] == 'premium') {
+      setState(() {
+        _messages.removeLast();
+        _isChatLoading = false;
+      });
+      _showPremiumDialog();
+      return;
+    }
 
     setState(() {
       _messages.add({

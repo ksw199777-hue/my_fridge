@@ -43,9 +43,35 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     _loadItems();
   }
 
-  Future<void> _estimatePrice() async {
+Future<void> _estimatePrice() async {
     setState(() => _isEstimating = true);
     final result = await ApiService.estimateShoppingPrice();
+    if (result['error'] == 'premium') {
+      setState(() => _isEstimating = false);
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('⭐ 프리미엄 기능'),
+          content: const Text('쇼핑 예상 가격 계산은 프리미엄 구독자만 사용할 수 있어요!\n\n월 3,000원으로 업그레이드해보세요 😄'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('닫기'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4A90D9),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('업그레이드'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
     setState(() {
       _estimate = result;
       _isEstimating = false;
