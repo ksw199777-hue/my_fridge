@@ -10,12 +10,14 @@ import 'screens/fridge_select_screen.dart';
 import 'splash_screen.dart';
 import 'notification_service.dart';
 import 'api_service.dart';
+import 'ad_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   await NotificationService.initialize();
   await ApiService.init();
+  await AdService.initialize();
   runApp(const MyApp());
 }
 

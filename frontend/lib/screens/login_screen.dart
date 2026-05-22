@@ -41,12 +41,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (result['token'] != null) {
         await ApiService.saveToken(result['token']);
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const FridgeSelectScreen()),
-          );
+        if (result['user'] != null && result['user']['subscription_type'] != null) {
+          await ApiService.setSubscriptionType(result['user']['subscription_type']);
         }
+        if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const FridgeSelectScreen()),
+        );
+      }
+    }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../api_service.dart';
 import 'fridge_select_screen.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import '../ad_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,6 +17,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _selectedLocation = '전체';
   bool _isSelectionMode = false;
   Set<int> _selectedIds = {};
+  BannerAd? _bannerAd;
 
   final List<Color> _avatarColors = [
     const Color(0xFF4A90D9),
@@ -36,6 +39,18 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadIngredients();
+    _loadBannerAd();
+  }
+
+  Future<void> _loadBannerAd() async {
+    _bannerAd = await AdService.loadBannerAd();
+    if (_bannerAd != null) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    AdService.disposeBannerAd();
+    super.dispose();
   }
 
   Future<void> _loadIngredients() async {
@@ -47,15 +62,17 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-List<dynamic> get _filteredIngredients {
+  List<dynamic> get _filteredIngredients {
     List<dynamic> filtered;
-    
+
     if (_selectedLocation == '전체') {
       filtered = List.from(_ingredients);
     } else if (_selectedLocation == '만료') {
       filtered = _ingredients.where((i) => i['d_day'] < 0).toList();
     } else {
-      filtered = _ingredients.where((i) => i['location'] == _selectedLocation).toList();
+      filtered = _ingredients
+          .where((i) => i['location'] == _selectedLocation)
+          .toList();
     }
 
     filtered.sort((a, b) {
@@ -92,10 +109,14 @@ List<dynamic> get _filteredIngredients {
 
   String _getLocationEmoji(String location) {
     switch (location) {
-      case '냉장': return '🧊';
-      case '냉동': return '❄️';
-      case '실온': return '🌡️';
-      default: return '📦';
+      case '냉장':
+        return '🧊';
+      case '냉동':
+        return '❄️';
+      case '실온':
+        return '🌡️';
+      default:
+        return '📦';
     }
   }
 
@@ -158,7 +179,7 @@ List<dynamic> get _filteredIngredients {
     }
   }
 
-void _showIngredientDetail(dynamic item) {
+  void _showIngredientDetail(dynamic item) {
     final dDay = item['d_day'] as int;
     final isExpired = dDay < 0;
     final nameController = TextEditingController(text: item['name']);
@@ -176,7 +197,9 @@ void _showIngredientDetail(dynamic item) {
         builder: (context, setModalState) => Padding(
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom,
-            left: 16, right: 16, top: 16,
+            left: 16,
+            right: 16,
+            top: 16,
           ),
           child: SingleChildScrollView(
             child: Column(
@@ -185,7 +208,8 @@ void _showIngredientDetail(dynamic item) {
               children: [
                 Center(
                   child: Container(
-                    width: 40, height: 4,
+                    width: 40,
+                    height: 4,
                     decoration: BoxDecoration(
                       color: Colors.grey.shade300,
                       borderRadius: BorderRadius.circular(2),
@@ -216,8 +240,13 @@ void _showIngredientDetail(dynamic item) {
                     ),
                   ),
                 if (isExpired) const SizedBox(height: 12),
-                Text(item['name'],
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Text(
+                  item['name'],
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Text(
                   item['expiry_date'] != null
@@ -228,8 +257,10 @@ void _showIngredientDetail(dynamic item) {
                 const SizedBox(height: 16),
                 const Divider(),
                 const SizedBox(height: 8),
-                const Text('✏️ 수정하기',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Text(
+                  '✏️ 수정하기',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: nameController,
@@ -246,7 +277,10 @@ void _showIngredientDetail(dynamic item) {
                   decoration: const InputDecoration(
                     labelText: '소비기한 (오늘부터 며칠?)',
                     border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.calendar_month, color: Color(0xFFFFB347)),
+                    prefixIcon: Icon(
+                      Icons.calendar_month,
+                      color: Color(0xFFFFB347),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -256,7 +290,10 @@ void _showIngredientDetail(dynamic item) {
                   decoration: const InputDecoration(
                     labelText: '가격 (원)',
                     border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.attach_money, color: Color(0xFFFF6B6B)),
+                    prefixIcon: Icon(
+                      Icons.attach_money,
+                      color: Color(0xFFFF6B6B),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -265,11 +302,18 @@ void _showIngredientDetail(dynamic item) {
                   decoration: const InputDecoration(
                     labelText: '보관 위치',
                     border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.location_on, color: Color(0xFFDDA0DD)),
+                    prefixIcon: Icon(
+                      Icons.location_on,
+                      color: Color(0xFFDDA0DD),
+                    ),
                   ),
-                  items: ['냉장', '냉동', '실온'].map((loc) =>
-                      DropdownMenuItem(value: loc, child: Text(loc))).toList(),
-                  onChanged: (val) => setModalState(() => selectedLocation = val!),
+                  items: ['냉장', '냉동', '실온']
+                      .map(
+                        (loc) => DropdownMenuItem(value: loc, child: Text(loc)),
+                      )
+                      .toList(),
+                  onChanged: (val) =>
+                      setModalState(() => selectedLocation = val!),
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
@@ -292,7 +336,9 @@ void _showIngredientDetail(dynamic item) {
                       backgroundColor: const Color(0xFF4A90D9),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: const Text('수정 완료', style: TextStyle(fontSize: 16)),
                   ),
@@ -307,7 +353,9 @@ void _showIngredientDetail(dynamic item) {
                         context: context,
                         builder: (context) => StatefulBuilder(
                           builder: (context, setDialogState) => AlertDialog(
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                             title: const Text('재료 삭제'),
                             content: Column(
                               mainAxisSize: MainAxisSize.min,
@@ -319,7 +367,9 @@ void _showIngredientDetail(dynamic item) {
                                   subtitle: const Text('가계부 금액은 그대로 남아요'),
                                   value: false,
                                   groupValue: deleteHistory,
-                                  onChanged: (val) => setDialogState(() => deleteHistory = val!),
+                                  onChanged: (val) => setDialogState(
+                                    () => deleteHistory = val!,
+                                  ),
                                   activeColor: const Color(0xFF4A90D9),
                                 ),
                                 RadioListTile<bool>(
@@ -327,7 +377,9 @@ void _showIngredientDetail(dynamic item) {
                                   subtitle: const Text('가계부에서 금액도 제거돼요'),
                                   value: true,
                                   groupValue: deleteHistory,
-                                  onChanged: (val) => setDialogState(() => deleteHistory = val!),
+                                  onChanged: (val) => setDialogState(
+                                    () => deleteHistory = val!,
+                                  ),
                                   activeColor: Colors.red,
                                 ),
                               ],
@@ -339,14 +391,20 @@ void _showIngredientDetail(dynamic item) {
                               ),
                               TextButton(
                                 onPressed: () => Navigator.pop(context, true),
-                                child: const Text('삭제', style: TextStyle(color: Colors.red)),
+                                child: const Text(
+                                  '삭제',
+                                  style: TextStyle(color: Colors.red),
+                                ),
                               ),
                             ],
                           ),
                         ),
                       );
                       if (confirm == true) {
-                        await ApiService.deleteIngredient(item['id'], deleteHistory: deleteHistory);
+                        await ApiService.deleteIngredient(
+                          item['id'],
+                          deleteHistory: deleteHistory,
+                        );
                         Navigator.pop(context);
                         _loadIngredients();
                       }
@@ -355,7 +413,9 @@ void _showIngredientDetail(dynamic item) {
                       foregroundColor: Colors.red,
                       side: const BorderSide(color: Colors.red),
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: Text(
                       isExpired ? '🗑️ 폐기 완료 - 삭제하기' : '삭제하기',
@@ -378,14 +438,21 @@ void _showIngredientDetail(dynamic item) {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: _isSelectionMode
-            ? Text('${_selectedIds.length}개 선택됨',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20))
+            ? Text(
+                '${_selectedIds.length}개 선택됨',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                ),
+              )
             : const Row(
                 children: [
                   Text('🧊', style: TextStyle(fontSize: 24)),
                   SizedBox(width: 8),
-                  Text('나만의 냉장고',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+                  Text(
+                    '나만의 냉장고',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                  ),
                 ],
               ),
         backgroundColor: Colors.white,
@@ -395,7 +462,9 @@ void _showIngredientDetail(dynamic item) {
             TextButton(
               onPressed: _selectAll,
               child: Text(
-                _selectedIds.length == _filteredIngredients.length ? '전체 해제' : '전체 선택',
+                _selectedIds.length == _filteredIngredients.length
+                    ? '전체 해제'
+                    : '전체 선택',
                 style: const TextStyle(color: Color(0xFF4A90D9)),
               ),
             ),
@@ -413,7 +482,9 @@ void _showIngredientDetail(dynamic item) {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const FridgeSelectScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const FridgeSelectScreen(),
+                  ),
                 );
               },
             ),
@@ -446,10 +517,16 @@ void _showIngredientDetail(dynamic item) {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _SummaryItem(emoji: '🥗', count: _ingredients.length, label: '전체'),
+                      _SummaryItem(
+                        emoji: '🥗',
+                        count: _ingredients.length,
+                        label: '전체',
+                      ),
                       _SummaryItem(
                         emoji: '⚠️',
-                        count: _ingredients.where((i) => i['d_day'] >= 0 && i['d_day'] <= 3).length,
+                        count: _ingredients
+                            .where((i) => i['d_day'] >= 0 && i['d_day'] <= 3)
+                            .length,
                         label: '임박',
                       ),
                       _SummaryItem(
@@ -468,11 +545,17 @@ void _showIngredientDetail(dynamic item) {
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: GestureDetector(
-                          onTap: () => setState(() => _selectedLocation = location),
+                          onTap: () =>
+                              setState(() => _selectedLocation = location),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
-                              color: isSelected ? const Color(0xFF4A90D9) : Colors.grey.shade100,
+                              color: isSelected
+                                  ? const Color(0xFF4A90D9)
+                                  : Colors.grey.shade100,
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
@@ -501,7 +584,10 @@ void _showIngredientDetail(dynamic item) {
                               Text(
                                 '$_selectedLocation 재료가 없어요!',
                                 style: const TextStyle(
-                                    fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey),
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey,
+                                ),
                               ),
                             ],
                           ),
@@ -515,7 +601,9 @@ void _showIngredientDetail(dynamic item) {
                               final item = _filteredIngredients[index];
                               final dDay = item['d_day'] as int;
                               final avatarColor = _getAvatarColor(item['name']);
-                              final isSelected = _selectedIds.contains(item['id'] as int);
+                              final isSelected = _selectedIds.contains(
+                                item['id'] as int,
+                              );
                               return GestureDetector(
                                 onTap: () {
                                   if (_isSelectionMode) {
@@ -538,45 +626,68 @@ void _showIngredientDetail(dynamic item) {
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
                                     side: isSelected
-                                        ? const BorderSide(color: Color(0xFF4A90D9), width: 2)
+                                        ? const BorderSide(
+                                            color: Color(0xFF4A90D9),
+                                            width: 2,
+                                          )
                                         : BorderSide.none,
                                   ),
                                   child: ListTile(
                                     contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 8),
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
                                     leading: _isSelectionMode
                                         ? Checkbox(
                                             value: isSelected,
-                                            onChanged: (_) => _toggleSelect(item['id'] as int),
-                                            activeColor: const Color(0xFF4A90D9),
+                                            onChanged: (_) => _toggleSelect(
+                                              item['id'] as int,
+                                            ),
+                                            activeColor: const Color(
+                                              0xFF4A90D9,
+                                            ),
                                           )
                                         : CircleAvatar(
-                                            backgroundColor: avatarColor.withOpacity(0.2),
+                                            backgroundColor: avatarColor
+                                                .withOpacity(0.2),
                                             child: Text(
                                               item['name'][0],
                                               style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: avatarColor,
-                                                  fontSize: 18),
+                                                fontWeight: FontWeight.bold,
+                                                color: avatarColor,
+                                                fontSize: 18,
+                                              ),
                                             ),
                                           ),
                                     title: Text(
                                       item['name'],
                                       style: const TextStyle(
-                                          fontWeight: FontWeight.bold, fontSize: 16),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
                                     ),
                                     subtitle: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         const SizedBox(height: 4),
-                                        Text('${_getLocationEmoji(item['location'])} ${item['location']}'),
+                                        Text(
+                                          '${_getLocationEmoji(item['location'])} ${item['location']}',
+                                        ),
                                         if (item['expiry_date'] != null)
-                                          Text('📦 유통기한: ${item['expiry_date']}'),
-                                        Text('🗓 소비기한: ${item['consume_date']}'),
+                                          Text(
+                                            '📦 유통기한: ${item['expiry_date']}',
+                                          ),
+                                        Text(
+                                          '🗓 소비기한: ${item['consume_date']}',
+                                        ),
                                         if (item['has_expiry_label'] == 0)
                                           const Text(
                                             '⚠️ 오늘 기준 산출 (탭해서 수정 가능)',
-                                            style: TextStyle(fontSize: 11, color: Colors.orange),
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.orange,
+                                            ),
                                           ),
                                         if (item['price'] > 0)
                                           Text('💰 ${item['price']}원'),
@@ -584,11 +695,17 @@ void _showIngredientDetail(dynamic item) {
                                     ),
                                     trailing: Container(
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 6),
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
                                       decoration: BoxDecoration(
-                                        color: _getDdayColor(dDay).withOpacity(0.15),
+                                        color: _getDdayColor(
+                                          dDay,
+                                        ).withOpacity(0.15),
                                         borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(color: _getDdayColor(dDay)),
+                                        border: Border.all(
+                                          color: _getDdayColor(dDay),
+                                        ),
                                       ),
                                       child: Text(
                                         _getDdayText(dDay),
@@ -607,6 +724,9 @@ void _showIngredientDetail(dynamic item) {
                 ),
               ],
             ),
+      bottomSheet: _bannerAd != null
+          ? SizedBox(height: 50, child: AdWidget(ad: _bannerAd!))
+          : null,
     );
   }
 }
@@ -628,10 +748,18 @@ class _SummaryItem extends StatelessWidget {
       children: [
         Text(emoji, style: const TextStyle(fontSize: 24)),
         const SizedBox(height: 4),
-        Text('$count',
-            style: const TextStyle(
-                fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        Text(
+          '$count',
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
+        ),
       ],
     );
   }
