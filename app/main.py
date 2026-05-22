@@ -98,14 +98,12 @@ def startup():
     firebase_creds = os.getenv("FIREBASE_CREDENTIALS")
     if firebase_creds:
         cred = credentials.Certificate(json.loads(firebase_creds))
-    else:
-        cred = credentials.Certificate("app/firebase-service-account.json")
-    firebase_admin.initialize_app(cred)
+        firebase_admin.initialize_app(cred)
     
     scheduler = BackgroundScheduler()
     scheduler.add_job(check_expiry, CronTrigger(hour=9, minute=0))
     scheduler.start()
-
+    
 @app.get("/")
 def root():
     return {"message": "나만의 냉장고 API 시작!"}
