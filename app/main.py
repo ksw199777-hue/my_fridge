@@ -391,7 +391,10 @@ def update_ingredient(ingredient_id: int, item: IngredientUpdate, db: Session = 
     }
 
 @app.get("/recipes")
-def get_recipes(db: Session = Depends(get_db)):
+def get_recipes(current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+    if current_user.subscription_type == "free":
+        raise HTTPException(status_code=403, detail="프리미엄 기능이에요! 업그레이드가 필요해요 ⭐")
+    
     ingredients = db.query(Ingredient).all()
     if not ingredients:
         return {"message": "냉장고에 재료가 없어요!", "recipes": []}
@@ -402,11 +405,14 @@ class RecipeChatRequest(BaseModel):
     message: str
 
 @app.post("/recipe/chat")
-async def recipe_chat(request: RecipeChatRequest, db: Session = Depends(get_db)):
+async def recipe_chat(request: RecipeChatRequest, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+    if current_user.subscription_type == "free":
+        raise HTTPException(status_code=403, detail="프리미엄 기능이에요! 업그레이드가 필요해요 ⭐")
+    
     ingredients = db.query(Ingredient).all()
     ingredient_names = ", ".join([i.name for i in ingredients]) if ingredients else "없음"
-    response = chat_recipe(request.message, ingredient_names)
-    return response
+    result = chat_recipe(request.message, ingredient_names)
+    return result
 
 class ShoppingItemCreate(BaseModel):
     name: str
@@ -549,7 +555,10 @@ def get_statistics(db: Session = Depends(get_db)):
     }
 
 @app.get("/shopping/estimate")
-def estimate_shopping_price(db: Session = Depends(get_db)):
+def estimate_shopping_price(current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+    if current_user.subscription_type == "free":
+        raise HTTPException(status_code=403, detail="프리미엄 기능이에요! 업그레이드가 필요해요 ⭐")
+    
     items = db.query(ShoppingItem).filter(ShoppingItem.is_purchased == 0).all()
     if not items:
         return {"message": "쇼핑 목록이 비어있어요!", "items": [], "total": 0}
@@ -582,11 +591,15 @@ def register(user: UserRegister, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=400, detail="이미 사용중인 이메일이에요")
     
+    VIP_EMAILS = ["ksw9777@naver.com"]
+    subscription = "vip" if user.email in VIP_EMAILS else "free"
+    
     new_user = User(
         email=user.email,
         username=user.username,
         password_hash=hash_password(user.password),
-        created_date=date.today()
+        created_date=date.today(),
+        subscription_type=subscription
     )
     db.add(new_user)
     db.commit()
