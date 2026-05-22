@@ -624,3 +624,12 @@ def join_fridge(invite_code: str, current_user: User = Depends(require_user), db
     db.add(member)
     db.commit()
     return {"message": f"{fridge.name}에 참여했어요!"}
+
+@app.delete("/shopping/{item_id}")
+def delete_shopping_item(item_id: int, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+    item = db.query(ShoppingItem).filter(ShoppingItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="아이템을 찾을 수 없어요")
+    db.delete(item)
+    db.commit()
+    return {"message": f"{item.name} 삭제됐어요!"}

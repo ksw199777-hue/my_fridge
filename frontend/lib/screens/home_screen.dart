@@ -420,6 +420,8 @@ void _showIngredientDetail(dynamic item) {
               onPressed: _loadIngredients,
             ),
           ],
+        ],
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
