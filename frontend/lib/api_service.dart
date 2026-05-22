@@ -327,4 +327,13 @@ class ApiService {
     }
     return {};
   }
+
+    // 냉장고 삭제
+  static Future<bool> deleteFridge(int fridgeId) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/fridges/$fridgeId'),
+      headers: _headers,
+    );
+    return response.statusCode == 200;
+  }
 }
