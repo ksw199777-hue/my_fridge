@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../api_service.dart';
 import '../main.dart';
+import 'package:flutter/services.dart';
 
 class FridgeSelectScreen extends StatefulWidget {
   const FridgeSelectScreen({super.key});
@@ -44,14 +45,14 @@ class _FridgeSelectScreenState extends State<FridgeSelectScreen> {
     final result = await ApiService.joinFridge(_inviteCodeController.text);
     if (result['message'] != null) {
       _inviteCodeController.clear();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message'])),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result['message'])));
       _loadFridges();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['detail'] ?? '오류가 발생했어요')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result['detail'] ?? '오류가 발생했어요')));
     }
   }
 
@@ -70,8 +71,10 @@ class _FridgeSelectScreenState extends State<FridgeSelectScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('냉장고 선택',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          '냉장고 선택',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -82,8 +85,7 @@ class _FridgeSelectScreenState extends State<FridgeSelectScreen> {
                 Navigator.pushReplacementNamed(context, '/');
               }
             },
-            child: const Text('로그아웃',
-                style: TextStyle(color: Colors.grey)),
+            child: const Text('로그아웃', style: TextStyle(color: Colors.grey)),
           ),
         ],
       ),
@@ -95,54 +97,101 @@ class _FridgeSelectScreenState extends State<FridgeSelectScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 내 냉장고 목록
-                  const Text('🧊 내 냉장고',
-                      style: TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text(
+                    '🧊 내 냉장고',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 12),
                   if (_fridges.isEmpty)
                     const Center(
-                      child: Text('냉장고가 없어요! 아래에서 만들어보세요',
-                          style: TextStyle(color: Colors.grey)),
+                      child: Text(
+                        '냉장고가 없어요! 아래에서 만들어보세요',
+                        style: TextStyle(color: Colors.grey),
+                      ),
                     )
                   else
-                    ..._fridges.map((fridge) => Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16)),
-                          child: ListTile(
-                            leading: const Text('🧊',
-                                style: TextStyle(fontSize: 28)),
-                            title: Text(fridge['name'],
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold)),
-                            subtitle: fridge['is_owner']
-                                ? Text('초대코드: ${fridge['invite_code']}',
-                                    style: const TextStyle(
-                                        fontSize: 12, color: Colors.grey))
-                                : const Text('공유 냉장고',
-                                    style: TextStyle(
-                                        fontSize: 12, color: Colors.grey)),
-                            trailing: ElevatedButton(
-                              onPressed: () => _selectFridge(fridge['id']),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF4A90D9),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8)),
-                              ),
-                              child: const Text('선택'),
-                            ),
+                    ..._fridges.map(
+                      (fridge) => Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: ListTile(
+                          leading: const Text(
+                            '🧊',
+                            style: TextStyle(fontSize: 28),
                           ),
-                        )),
+                          title: Text(
+                            fridge['name'],
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: fridge['is_owner']
+                              ? Row(
+                                  children: [
+                                    Text(
+                                      '초대코드: ${fridge['invite_code']}',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                    InkWell(
+                                      onTap: () {
+                                        Clipboard.setData(
+                                          ClipboardData(
+                                            text: fridge['invite_code'],
+                                          ),
+                                        );
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('초대코드가 복사됐어요!'),
+                                          ),
+                                        );
+                                      },
+                                      child: const Padding(
+                                        padding: EdgeInsets.all(4),
+                                        child: Icon(
+                                          Icons.copy,
+                                          size: 14,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : const Text(
+                                  '공유 냉장고',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                          trailing: ElevatedButton(
+                            onPressed: () => _selectFridge(fridge['id']),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4A90D9),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text('선택'),
+                          ),
+                        ),
+                      ),
+                    ),
 
                   const SizedBox(height: 24),
                   const Divider(),
                   const SizedBox(height: 16),
 
                   // 새 냉장고 만들기
-                  const Text('➕ 새 냉장고 만들기',
-                      style: TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text(
+                    '➕ 새 냉장고 만들기',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -152,8 +201,10 @@ class _FridgeSelectScreenState extends State<FridgeSelectScreen> {
                           decoration: const InputDecoration(
                             labelText: '냉장고 이름 (예: 우리집, 회사)',
                             border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.kitchen,
-                                color: Color(0xFF4A90D9)),
+                            prefixIcon: Icon(
+                              Icons.kitchen,
+                              color: Color(0xFF4A90D9),
+                            ),
                           ),
                         ),
                       ),
@@ -164,9 +215,12 @@ class _FridgeSelectScreenState extends State<FridgeSelectScreen> {
                           backgroundColor: const Color(0xFF4A90D9),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 16),
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                         child: const Text('만들기'),
                       ),
@@ -176,9 +230,10 @@ class _FridgeSelectScreenState extends State<FridgeSelectScreen> {
                   const SizedBox(height: 24),
 
                   // 초대 코드로 참여
-                  const Text('🔗 초대 코드로 참여',
-                      style: TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text(
+                    '🔗 초대 코드로 참여',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -188,8 +243,10 @@ class _FridgeSelectScreenState extends State<FridgeSelectScreen> {
                           decoration: const InputDecoration(
                             labelText: '초대 코드 입력',
                             border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.link,
-                                color: Color(0xFF7BC67E)),
+                            prefixIcon: Icon(
+                              Icons.link,
+                              color: Color(0xFF7BC67E),
+                            ),
                           ),
                         ),
                       ),
@@ -200,9 +257,12 @@ class _FridgeSelectScreenState extends State<FridgeSelectScreen> {
                           backgroundColor: const Color(0xFF7BC67E),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 16),
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                         child: const Text('참여'),
                       ),
