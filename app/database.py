@@ -22,6 +22,7 @@ class User(Base):
     username = Column(String, index=True)
     password_hash = Column(String)
     created_date = Column(Date, default=date.today)
+    fcm_token = Column(String, nullable=True)  # 추가
     fridges = relationship("Fridge", back_populates="owner")
 
 class Fridge(Base):

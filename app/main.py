@@ -11,6 +11,8 @@ from app.auth import hash_password, verify_password, create_access_token, get_cu
 from app.database import get_db, create_tables, Ingredient, ShoppingItem, PurchaseHistory, User, Fridge, FridgeMember
 import random
 import string
+import firebase_admin
+from firebase_admin import credentials, messaging
 
 load_dotenv()
 
@@ -39,23 +41,66 @@ def check_expiry():
     from app.database import SessionLocal
     db = SessionLocal()
     today = date.today()
-    expiring = db.query(Ingredient).filter(
-        Ingredient.consume_date <= today + timedelta(days=3),
-        Ingredient.consume_date >= today
-    ).all()
-    expired = db.query(Ingredient).filter(
-        Ingredient.consume_date < today
-    ).all()
-    for i in expiring:
-        dday = (i.consume_date - today).days
-        print(f"⚠️ 임박: {i.name} D-{dday}")
-    for i in expired:
-        print(f"❌ 만료: {i.name}")
+    
+    users = db.query(User).filter(User.fcm_token != None).all()
+    
+    for user in users:
+        owned_fridge_ids = [f.id for f in db.query(Fridge).filter(Fridge.owner_id == user.id).all()]
+        member_fridge_ids = [m.fridge_id for m in db.query(FridgeMember).filter(FridgeMember.user_id == user.id).all()]
+        all_fridge_ids = owned_fridge_ids + member_fridge_ids
+        
+        expiring = db.query(Ingredient).filter(
+            Ingredient.fridge_id.in_(all_fridge_ids),
+            Ingredient.consume_date <= today + timedelta(days=3),
+            Ingredient.consume_date >= today
+        ).all()
+        
+        expired = db.query(Ingredient).filter(
+            Ingredient.fridge_id.in_(all_fridge_ids),
+            Ingredient.consume_date < today
+        ).all()
+        
+        if expiring:
+            names = ", ".join([i.name for i in expiring[:3]])
+            try:
+                messaging.send(messaging.Message(
+                    notification=messaging.Notification(
+                        title="⚠️ 소비기한 임박!",
+                        body=f"{names} 등 {len(expiring)}개 재료가 3일 이내예요!",
+                    ),
+                    token=user.fcm_token,
+                ))
+            except Exception as e:
+                print(f"알림 전송 실패: {e}")
+        
+        if expired:
+            names = ", ".join([i.name for i in expired[:3]])
+            try:
+                messaging.send(messaging.Message(
+                    notification=messaging.Notification(
+                        title="❌ 소비기한 만료!",
+                        body=f"{names} 등 {len(expired)}개 재료가 만료됐어요!",
+                    ),
+                    token=user.fcm_token,
+                ))
+            except Exception as e:
+                print(f"알림 전송 실패: {e}")
+    
     db.close()
 
 @app.on_event("startup")
 def startup():
     create_tables()
+    
+    # Firebase 초기화
+    import json
+    firebase_creds = os.getenv("FIREBASE_CREDENTIALS")
+    if firebase_creds:
+        cred = credentials.Certificate(json.loads(firebase_creds))
+    else:
+        cred = credentials.Certificate("app/firebase-service-account.json")
+    firebase_admin.initialize_app(cred)
+    
     scheduler = BackgroundScheduler()
     scheduler.add_job(check_expiry, CronTrigger(hour=9, minute=0))
     scheduler.start()
@@ -646,3 +691,12 @@ def delete_fridge(fridge_id: int, current_user: User = Depends(require_user), db
     db.delete(fridge)
     db.commit()
     return {"message": f"{fridge.name} 삭제됐어요!"}
+
+class FCMTokenUpdate(BaseModel):
+    fcm_token: str
+
+@app.post("/auth/fcm-token")
+def update_fcm_token(token: FCMTokenUpdate, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+    current_user.fcm_token = token.fcm_token
+    db.commit()
+    return {"message": "FCM 토큰 저장됐어요!"}
