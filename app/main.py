@@ -291,20 +291,21 @@ def get_ingredients(
     if fridge_id:
         query = query.filter(Ingredient.fridge_id == fridge_id)
     else:
-        # 내 모든 냉장고 재료
         owned_fridge_ids = [f.id for f in db.query(Fridge).filter(Fridge.owner_id == current_user.id).all()]
         member_fridge_ids = [m.fridge_id for m in db.query(FridgeMember).filter(FridgeMember.user_id == current_user.id).all()]
         all_fridge_ids = owned_fridge_ids + member_fridge_ids
         query = query.filter(Ingredient.fridge_id.in_(all_fridge_ids))
     
-    ingredients = query.all()
+    # 이름순 → 날짜순 정렬 (같은 재료끼리 묶임)
+    ingredients = query.order_by(Ingredient.name, Ingredient.registered_date).all()
+    
     return {"ingredients": [
         {
             "id": i.id,
             "name": i.name,
-            "registered_date": i.registered_date,
-            "expiry_date": i.expiry_date,
-            "consume_date": i.consume_date,
+            "registered_date": str(i.registered_date),
+            "expiry_date": str(i.expiry_date) if i.expiry_date else None,
+            "consume_date": str(i.consume_date),
             "has_expiry_label": i.has_expiry_label,
             "price": i.price,
             "location": i.location,
@@ -392,11 +393,19 @@ class IngredientCreate(BaseModel):
 
 @app.post("/ingredients")
 def create_ingredient(item: IngredientCreate, fridge_id: int, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+    check_fridge_limit(current_user, db)
+    
+    # 소비기한 비워두면 AI 자동 산출
+    consume_days = item.consume_days
+    if consume_days == 7:  # 기본값이면 AI로 산출
+        from app.ai import get_consume_days_by_storage
+        consume_days = get_consume_days_by_storage(item.name, item.storage_type)
+    
     ingredient = Ingredient(
         name=item.name,
         registered_date=date.today(),
         expiry_date=date.today() + timedelta(days=item.expiry_days) if item.expiry_days else None,
-        consume_date=date.today() + timedelta(days=item.consume_days),
+        consume_date=date.today() + timedelta(days=consume_days),
         has_expiry_label=1 if item.has_expiry_label else 0,
         storage_type=item.storage_type,
         price=item.price,
@@ -416,6 +425,7 @@ def create_ingredient(item: IngredientCreate, fridge_id: int, current_user: User
         "has_expiry_label": ingredient.has_expiry_label,
         "price": ingredient.price,
         "location": ingredient.location,
+        "storage_type": ingredient.storage_type,
         "fridge_id": ingredient.fridge_id
     }
 class IngredientUpdate(BaseModel):

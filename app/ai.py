@@ -358,11 +358,17 @@ def estimate_price(items: list) -> dict:
 def get_consume_days_by_storage(ingredient_name: str, storage_type: str) -> int:
     message = client.messages.create(
         model="claude-opus-4-5",
-        max_tokens=256,
+        max_tokens=512,
+        tools=[
+            {
+                "type": "web_search_20250305",
+                "name": "web_search"
+            }
+        ],
         messages=[
             {
                 "role": "user",
-                "content": f"""식품위생법과 식품의약품안전처 기준을 참고해서 답해주세요.
+                "content": f"""식품의약품안전처 기준과 식품위생법을 웹에서 검색해서 답해주세요.
 재료: {ingredient_name}
 보관방법: {storage_type}
 
@@ -374,9 +380,13 @@ def get_consume_days_by_storage(ingredient_name: str, storage_type: str) -> int:
     )
     
     try:
-        days = int(message.content[0].text.strip())
-        return days
+        for block in message.content:
+            if block.type == "text":
+                days = int(block.text.strip())
+                return days
     except:
-        # 기본값 (보관방법별)
-        defaults = {"냉장": 7, "냉동": 90, "실온": 3}
-        return defaults.get(storage_type, 7)
+        pass
+    
+    # 기본값 (보관방법별)
+    defaults = {"냉장": 7, "냉동": 90, "실온": 3}
+    return defaults.get(storage_type, 7)
