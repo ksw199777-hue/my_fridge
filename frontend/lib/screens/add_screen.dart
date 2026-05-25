@@ -69,56 +69,60 @@ class _AddScreenState extends State<AddScreen> {
     }
   }
 
-Future<void> _saveAllIngredients() async {
-  if (_pendingIngredients.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('저장할 재료가 없어요!')),
-    );
-    return;
-  }
-
-  setState(() => _isLoading = true);
-
-  int successCount = 0;
-  for (var item in _pendingIngredients) {
-    print('저장 시도: ${item['name']}, storage_type: ${item['storage_type']}');
-
-    int consumeDays = 7;
-    if (item['consume_date'] != null) {
-      try {
-        final consumeDate = DateTime.parse(item['consume_date']);
-        final today = DateTime.now();
-        consumeDays = consumeDate.difference(today).inDays;
-        if (consumeDays < 0) consumeDays = 0;
-      } catch (e) {
-        consumeDays = item['consume_days'] ?? 7;
-      }
-    } else {
-      consumeDays = item['consume_days'] ?? 7;
+  Future<void> _saveAllIngredients() async {
+    if (_pendingIngredients.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('저장할 재료가 없어요!')));
+      return;
     }
 
-    final success = await ApiService.addIngredient(
-      name: item['name'],
-      consumeDays: consumeDays,
-      price: item['price'] ?? 0,
-      location: item['storage_type'] ?? '냉장',
-      storageType: item['storage_type'] ?? '냉장',
-      hasExpiryLabel: (item['has_expiry_label'] == true || item['has_expiry_label'] == 1),
-    );
-    if (success) successCount++;
-  }
+    setState(() => _isLoading = true);
 
-  setState(() {
-    _isLoading = false;
-    _pendingIngredients = [];
-  });
+    int successCount = 0;
+    for (var item in _pendingIngredients) {
+      print('저장 시도: ${item['name']}, storage_type: ${item['storage_type']}');
 
-  if (mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$successCount개 재료가 저장됐어요! 🎉')),
-    );
+      int consumeDays = 7;
+      if (item['consume_date'] != null) {
+        try {
+          final consumeDate = DateTime.parse(item['consume_date']);
+          final today = DateTime.now();
+          consumeDays = consumeDate.difference(today).inDays;
+          if (consumeDays < 0) consumeDays = 0;
+        } catch (e) {
+          consumeDays = item['consume_days'] ?? 7;
+        }
+      } else {
+        consumeDays = item['consume_days'] ?? 7;
+      }
+      print('계산된 consumeDays: $consumeDays');
+      print('보내는 데이터: name=${item['name']}, consumeDays=$consumeDays, hasExpiryLabel=${item['has_expiry_label'] == true || item['has_expiry_label'] == 1}');
+
+      final success = await ApiService.addIngredient(
+        name: item['name'],
+        consumeDays: consumeDays,
+        price: item['price'] ?? 0,
+        location: item['storage_type'] ?? '냉장',
+        storageType: item['storage_type'] ?? '냉장',
+        hasExpiryLabel:
+            (item['has_expiry_label'] == true || item['has_expiry_label'] == 1),
+      );
+      print('저장 결과: $success');
+      if (success) successCount++;
+    }
+
+    setState(() {
+      _isLoading = false;
+      _pendingIngredients = [];
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$successCount개 재료가 저장됐어요! 🎉')));
+    }
   }
-}
 
   Future<void> _addManually() async {
     if (_nameController.text.isEmpty) {
