@@ -351,7 +351,7 @@ class _AddScreenState extends State<AddScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: _saveAllIngredients,
+                        onPressed: _isLoading ? null : _saveAllIngredients,
                         icon: const Icon(Icons.save),
                         label: Text('${_pendingIngredients.length}개 저장하기'),
                         style: ElevatedButton.styleFrom(

@@ -240,6 +240,7 @@ class ApiService {
     int? consumeDays,
     int? price,
     String? location,
+    String? storageType,
   }) async {
     final response = await http.put(
       Uri.parse('$baseUrl/ingredients/$id'),
