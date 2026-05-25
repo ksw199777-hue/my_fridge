@@ -81,8 +81,6 @@ class _AddScreenState extends State<AddScreen> {
 
     int successCount = 0;
     for (var item in _pendingIngredients) {
-      print('저장 시도: ${item['name']}, storage_type: ${item['storage_type']}');
-
       int consumeDays = 7;
       if (item['consume_date'] != null) {
         try {
@@ -96,8 +94,13 @@ class _AddScreenState extends State<AddScreen> {
       } else {
         consumeDays = item['consume_days'] ?? 7;
       }
-      print('계산된 consumeDays: $consumeDays');
-      print('보내는 데이터: name=${item['name']}, consumeDays=$consumeDays, hasExpiryLabel=${item['has_expiry_label'] == true || item['has_expiry_label'] == 1}');
+
+      if (item['storage_type'] != null && item['storage_type'] != '냉장') {
+        consumeDays = await ApiService.calculateConsumeDays(
+          name: item['name'],
+          storageType: item['storage_type'],
+        );
+      }
 
       final success = await ApiService.addIngredient(
         name: item['name'],
@@ -108,7 +111,6 @@ class _AddScreenState extends State<AddScreen> {
         hasExpiryLabel:
             (item['has_expiry_label'] == true || item['has_expiry_label'] == 1),
       );
-      print('저장 결과: $success');
       if (success) successCount++;
     }
 

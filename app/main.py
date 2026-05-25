@@ -66,14 +66,6 @@ def check_member_limit(fridge: Fridge, current_user: User, db: Session):
 
 app = FastAPI(title="나만의 냉장고 API")
 
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
-
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request, exc):
-    print(f"422 에러 상세: {exc.errors()}")
-    return JSONResponse(status_code=422, content={"detail": exc.errors()})
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -402,7 +394,6 @@ class IngredientCreate(BaseModel):
 
 @app.post("/ingredients")
 def create_ingredient(item: IngredientCreate, fridge_id: int, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
-    print(f"받은 데이터: {item}")
     check_fridge_limit(current_user, db)
     
     # 소비기한 비워두면 AI 자동 산출
@@ -857,3 +848,13 @@ def update_subscription(data: SubscriptionUpdate, current_user: User = Depends(r
         "subscription_expires": current_user.subscription_expires,
         "trial_used": current_user.trial_used
     }
+    
+class StorageTypeRequest(BaseModel):
+    name: str
+    storage_type: str
+
+@app.post("/ingredients/calculate-consume-days")
+def calculate_consume_days(request: StorageTypeRequest, current_user: User = Depends(require_user)):
+    from app.ai import get_consume_days_by_storage
+    days = get_consume_days_by_storage(request.name, request.storage_type)
+    return {"consume_days": days}
