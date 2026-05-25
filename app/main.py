@@ -65,6 +65,14 @@ def check_member_limit(fridge: Fridge, current_user: User, db: Session):
 
 app = FastAPI(title="나만의 냉장고 API")
 
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    print(f"422 에러 상세: {exc.errors()}")
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
