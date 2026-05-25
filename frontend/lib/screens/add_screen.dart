@@ -44,9 +44,9 @@ class _AddScreenState extends State<AddScreen> {
     final ingredients = result['ingredients'] as List<dynamic>? ?? [];
     if (ingredients.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('재료를 인식하지 못했어요 😢')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('재료를 인식하지 못했어요 😢')));
       }
       return;
     }
@@ -54,25 +54,26 @@ class _AddScreenState extends State<AddScreen> {
     // 임시 리스트에 추가 (기본 보관방법 '냉장')
     setState(() {
       for (var item in ingredients) {
-        _pendingIngredients.add({
-          ...item,
-          'storage_type': '냉장',
-        });
+        _pendingIngredients.add({...item, 'storage_type': '냉장'});
       }
     });
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${ingredients.length}개 재료가 목록에 추가됐어요! 저장 전 보관방법을 확인해주세요 😄')),
+        SnackBar(
+          content: Text(
+            '${ingredients.length}개 재료가 목록에 추가됐어요! 저장 전 보관방법을 확인해주세요 😄',
+          ),
+        ),
       );
     }
   }
 
   Future<void> _saveAllIngredients() async {
     if (_pendingIngredients.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('저장할 재료가 없어요!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('저장할 재료가 없어요!')));
       return;
     }
 
@@ -93,9 +94,24 @@ class _AddScreenState extends State<AddScreen> {
 
     int successCount = 0;
     for (var item in _pendingIngredients) {
+      // consume_date가 날짜 문자열로 오면 오늘부터 일수로 변환
+      int consumeDays = 7;
+      if (item['consume_date'] != null) {
+        try {
+          final consumeDate = DateTime.parse(item['consume_date']);
+          final today = DateTime.now();
+          consumeDays = consumeDate.difference(today).inDays;
+          if (consumeDays < 0) consumeDays = 0;
+        } catch (e) {
+          consumeDays = item['consume_days'] ?? 7;
+        }
+      } else {
+        consumeDays = item['consume_days'] ?? 7;
+      }
+
       final success = await ApiService.addIngredient(
         name: item['name'],
-        consumeDays: item['consume_days'] ?? 7,
+        consumeDays: consumeDays,
         price: item['price'] ?? 0,
         location: item['storage_type'] ?? '냉장',
         storageType: item['storage_type'] ?? '냉장',
@@ -110,17 +126,17 @@ class _AddScreenState extends State<AddScreen> {
     });
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$successCount개 재료가 저장됐어요! 🎉')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$successCount개 재료가 저장됐어요! 🎉')));
     }
   }
 
   Future<void> _addManually() async {
     if (_nameController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('재료 이름을 입력해주세요')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('재료 이름을 입력해주세요')));
       return;
     }
 
@@ -144,9 +160,9 @@ class _AddScreenState extends State<AddScreen> {
       _expiryController.clear();
       _consumeController.clear();
       _priceController.clear();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('재료가 추가됐어요! 😄')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('재료가 추가됐어요! 😄')));
     }
   }
 
@@ -159,8 +175,10 @@ class _AddScreenState extends State<AddScreen> {
           children: [
             Text('➕', style: TextStyle(fontSize: 24)),
             SizedBox(width: 8),
-            Text('재료 추가',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+            Text(
+              '재료 추가',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+            ),
           ],
         ),
         backgroundColor: Colors.white,
@@ -173,9 +191,10 @@ class _AddScreenState extends State<AddScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('📸 사진으로 추가',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text(
+                    '📸 사진으로 추가',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -185,7 +204,9 @@ class _AddScreenState extends State<AddScreen> {
                           label: '카메라',
                           color: const Color(0xFF4A90D9),
                           onTap: () => _pickAndRecognize(
-                              ImageSource.camera, 'ingredient'),
+                            ImageSource.camera,
+                            'ingredient',
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -194,8 +215,8 @@ class _AddScreenState extends State<AddScreen> {
                           icon: Icons.receipt_long,
                           label: '영수증',
                           color: const Color(0xFF7BC67E),
-                          onTap: () => _pickAndRecognize(
-                              ImageSource.gallery, 'receipt'),
+                          onTap: () =>
+                              _pickAndRecognize(ImageSource.gallery, 'receipt'),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -205,7 +226,9 @@ class _AddScreenState extends State<AddScreen> {
                           label: '스크린샷',
                           color: const Color(0xFFFFB347),
                           onTap: () => _pickAndRecognize(
-                              ImageSource.gallery, 'screenshot'),
+                            ImageSource.gallery,
+                            'screenshot',
+                          ),
                         ),
                       ),
                     ],
@@ -220,13 +243,17 @@ class _AddScreenState extends State<AddScreen> {
                         Text(
                           '📋 저장 대기 중 (${_pendingIngredients.length}개)',
                           style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         TextButton(
                           onPressed: () =>
                               setState(() => _pendingIngredients = []),
-                          child: const Text('전체 삭제',
-                              style: TextStyle(color: Colors.red)),
+                          child: const Text(
+                            '전체 삭제',
+                            style: TextStyle(color: Colors.red),
+                          ),
                         ),
                       ],
                     ),
@@ -240,15 +267,19 @@ class _AddScreenState extends State<AddScreen> {
                         return Card(
                           margin: const EdgeInsets.only(bottom: 8),
                           child: ListTile(
-                            leading: const Icon(Icons.food_bank,
-                                color: Color(0xFF4A90D9)),
+                            leading: const Icon(
+                              Icons.food_bank,
+                              color: Color(0xFF4A90D9),
+                            ),
                             title: Text(item['name']),
                             subtitle: Text(
-                                '소비기한: ${item['consume_date'] ?? '자동산출'} · ${item['storage_type']}'),
+                              '소비기한: ${item['consume_date'] ?? '자동산출'} · ${item['storage_type']}',
+                            ),
                             trailing: IconButton(
                               icon: const Icon(Icons.close, color: Colors.red),
-                              onPressed: () => setState(() =>
-                                  _pendingIngredients.removeAt(index)),
+                              onPressed: () => setState(
+                                () => _pendingIngredients.removeAt(index),
+                              ),
                             ),
                           ),
                         );
@@ -260,13 +291,11 @@ class _AddScreenState extends State<AddScreen> {
                       child: ElevatedButton.icon(
                         onPressed: _saveAllIngredients,
                         icon: const Icon(Icons.save),
-                        label: Text(
-                            '${_pendingIngredients.length}개 저장하기'),
+                        label: Text('${_pendingIngredients.length}개 저장하기'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF4A90D9),
                           foregroundColor: Colors.white,
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 16),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -276,9 +305,10 @@ class _AddScreenState extends State<AddScreen> {
                     const SizedBox(height: 24),
                   ],
 
-                  const Text('✏️ 직접 입력',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text(
+                    '✏️ 직접 입력',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 12),
                   Card(
                     color: Colors.white,
@@ -293,8 +323,10 @@ class _AddScreenState extends State<AddScreen> {
                             controller: _nameController,
                             decoration: const InputDecoration(
                               labelText: '재료 이름',
-                              prefixIcon: Icon(Icons.food_bank,
-                                  color: Color(0xFF4A90D9)),
+                              prefixIcon: Icon(
+                                Icons.food_bank,
+                                color: Color(0xFF4A90D9),
+                              ),
                               border: OutlineInputBorder(),
                             ),
                           ),
@@ -304,8 +336,10 @@ class _AddScreenState extends State<AddScreen> {
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(
                               labelText: '유통기한 (일, 없으면 비워두세요)',
-                              prefixIcon: Icon(Icons.calendar_today,
-                                  color: Color(0xFF7BC67E)),
+                              prefixIcon: Icon(
+                                Icons.calendar_today,
+                                color: Color(0xFF7BC67E),
+                              ),
                               border: OutlineInputBorder(),
                             ),
                           ),
@@ -315,21 +349,28 @@ class _AddScreenState extends State<AddScreen> {
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(
                               labelText: '소비기한 (일, 모르면 비워두세요 → 자동 산출해드려요!)',
-                              prefixIcon: Icon(Icons.calendar_month,
-                                  color: Color(0xFFFFB347)),
+                              prefixIcon: Icon(
+                                Icons.calendar_month,
+                                color: Color(0xFFFFB347),
+                              ),
                               border: OutlineInputBorder(),
                             ),
                           ),
                           const SizedBox(height: 4),
                           const Row(
                             children: [
-                              Icon(Icons.info_outline,
-                                  size: 12, color: Colors.grey),
+                              Icon(
+                                Icons.info_outline,
+                                size: 12,
+                                color: Colors.grey,
+                              ),
                               SizedBox(width: 4),
                               Text(
                                 '식품위생법 및 식약처 기준을 참고해 산출합니다',
                                 style: TextStyle(
-                                    fontSize: 11, color: Colors.grey),
+                                  fontSize: 11,
+                                  color: Colors.grey,
+                                ),
                               ),
                             ],
                           ),
@@ -339,8 +380,10 @@ class _AddScreenState extends State<AddScreen> {
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(
                               labelText: '가격 (원)',
-                              prefixIcon: Icon(Icons.attach_money,
-                                  color: Color(0xFFFF6B6B)),
+                              prefixIcon: Icon(
+                                Icons.attach_money,
+                                color: Color(0xFFFF6B6B),
+                              ),
                               border: OutlineInputBorder(),
                             ),
                           ),
@@ -349,8 +392,10 @@ class _AddScreenState extends State<AddScreen> {
                             value: _selectedStorageType,
                             decoration: const InputDecoration(
                               labelText: '보관 방법',
-                              prefixIcon: Icon(Icons.kitchen,
-                                  color: Color(0xFFDDA0DD)),
+                              prefixIcon: Icon(
+                                Icons.kitchen,
+                                color: Color(0xFFDDA0DD),
+                              ),
                               border: OutlineInputBorder(),
                             ),
                             items: ['냉장', '냉동', '실온'].map((type) {
@@ -359,8 +404,8 @@ class _AddScreenState extends State<AddScreen> {
                                 child: Text(type),
                               );
                             }).toList(),
-                            onChanged: (value) => setState(
-                                () => _selectedStorageType = value!),
+                            onChanged: (value) =>
+                                setState(() => _selectedStorageType = value!),
                           ),
                           const SizedBox(height: 16),
                           SizedBox(
@@ -371,13 +416,16 @@ class _AddScreenState extends State<AddScreen> {
                                 backgroundColor: const Color(0xFF4A90D9),
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(
-                                    vertical: 16),
+                                  vertical: 16,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              child: const Text('추가하기',
-                                  style: TextStyle(fontSize: 16)),
+                              child: const Text(
+                                '추가하기',
+                                style: TextStyle(fontSize: 16),
+                              ),
                             ),
                           ),
                         ],
@@ -411,7 +459,9 @@ class _StorageTypeDialogState extends State<_StorageTypeDialog> {
   @override
   void initState() {
     super.initState();
-    _items = widget.ingredients.map((e) => Map<String, dynamic>.from(e)).toList();
+    _items = widget.ingredients
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
   }
 
   @override
@@ -461,7 +511,9 @@ class _StorageTypeDialogState extends State<_StorageTypeDialog> {
                             decoration: const InputDecoration(
                               border: OutlineInputBorder(),
                               contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                             ),
                             items: ['냉장', '냉동', '실온'].map((type) {
                               return DropdownMenuItem(
@@ -470,7 +522,8 @@ class _StorageTypeDialogState extends State<_StorageTypeDialog> {
                               );
                             }).toList(),
                             onChanged: (value) => setState(
-                                () => _items[index]['storage_type'] = value!),
+                              () => _items[index]['storage_type'] = value!,
+                            ),
                           ),
                         ),
                       ],
@@ -531,9 +584,10 @@ class _AddButton extends StatelessWidget {
           children: [
             Icon(icon, color: color, size: 32),
             const SizedBox(height: 8),
-            Text(label,
-                style:
-                    TextStyle(color: color, fontWeight: FontWeight.bold)),
+            Text(
+              label,
+              style: TextStyle(color: color, fontWeight: FontWeight.bold),
+            ),
           ],
         ),
       ),
