@@ -111,6 +111,11 @@ def root():
 @app.post("/recognize")
 async def recognize(file: UploadFile = File(...), fridge_id: int = None, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
     image_bytes = await file.read()
+    if not fridge_id:
+        my_fridge = db.query(Fridge).filter(Fridge.owner_id == current_user.id).first()
+        if not my_fridge:
+            raise HTTPException(status_code=404, detail="냉장고가 없어요. 냉장고를 먼저 만들어주세요!")
+        fridge_id = my_fridge.id
     ingredients = recognize_ingredients(image_bytes)
     saved = []
     for item in ingredients:
@@ -125,6 +130,7 @@ async def recognize(file: UploadFile = File(...), fridge_id: int = None, current
             has_expiry_label=1 if has_expiry_label else 0,
             price=0,
             location="냉장"
+            fridge_id=fridge_id
         )
         db.add(ingredient)
         db.commit()
@@ -148,6 +154,11 @@ async def recognize(file: UploadFile = File(...), fridge_id: int = None, current
 @app.post("/recognize/screenshot")
 async def recognize(file: UploadFile = File(...), fridge_id: int = None, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
     image_bytes = await file.read()
+    if not fridge_id:
+        my_fridge = db.query(Fridge).filter(Fridge.owner_id == current_user.id).first()
+        if not my_fridge:
+            raise HTTPException(status_code=404, detail="냉장고가 없어요. 냉장고를 먼저 만들어주세요!")
+        fridge_id = my_fridge.id
     ingredients = recognize_from_screenshot(image_bytes)
     saved = []
     for item in ingredients:
@@ -160,6 +171,7 @@ async def recognize(file: UploadFile = File(...), fridge_id: int = None, current
             has_expiry_label=0,
             price=item.get("price", 0),
             location="냉장"
+            fridge_id=fridge_id
         )
         db.add(ingredient)
         db.commit()
@@ -184,6 +196,11 @@ async def recognize(file: UploadFile = File(...), fridge_id: int = None, current
 @app.post("/recognize/receipt")
 async def recognize(file: UploadFile = File(...), fridge_id: int = None, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
     image_bytes = await file.read()
+    if not fridge_id:
+        my_fridge = db.query(Fridge).filter(Fridge.owner_id == current_user.id).first()
+        if not my_fridge:
+            raise HTTPException(status_code=404, detail="냉장고가 없어요. 냉장고를 먼저 만들어주세요!")
+        fridge_id = my_fridge.id
     ingredients = recognize_receipt(image_bytes)
     saved = []
     for item in ingredients:
@@ -196,6 +213,7 @@ async def recognize(file: UploadFile = File(...), fridge_id: int = None, current
             has_expiry_label=0,
             price=item.get("price", 0),
             location="냉장"
+            fridge_id=fridge_id
         )
         db.add(ingredient)
         db.commit()
