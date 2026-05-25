@@ -172,6 +172,7 @@ class ApiService {
         'consume_days': consumeDays,
         'price': price,
         'location': location,
+        'storage_type': storageType,
         'has_expiry_label': hasExpiryLabel,
       }),
     );
