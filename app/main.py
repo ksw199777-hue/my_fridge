@@ -13,6 +13,7 @@ import random
 import string
 import firebase_admin
 from firebase_admin import credentials, messaging
+from typing import Optional
 import os
 
 load_dotenv()
@@ -392,7 +393,7 @@ def delete_ingredient(ingredient_id: int, db: Session = Depends(get_db)):
 
 class IngredientCreate(BaseModel):
     name: str
-    expiry_days: int = None
+    expiry_days: Optional[int] = None
     consume_days: int = 7
     price: int = 0
     location: str = "냉장"
