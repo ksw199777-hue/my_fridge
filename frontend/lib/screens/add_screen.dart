@@ -465,6 +465,7 @@ class _StorageTypeDialogState extends State<_StorageTypeDialog> {
   @override
   void initState() {
     super.initState();
+    // 깊은 복사로 변경
     _items = widget.ingredients
         .map((e) => Map<String, dynamic>.from(e))
         .toList();
@@ -512,23 +513,32 @@ class _StorageTypeDialogState extends State<_StorageTypeDialog> {
                         ),
                         Expanded(
                           flex: 3,
-                          child: DropdownButtonFormField<String>(
-                            value: item['storage_type'] ?? '냉장',
-                            decoration: const InputDecoration(
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey),
+                              borderRadius: BorderRadius.circular(4),
                             ),
-                            items: ['냉장', '냉동', '실온'].map((type) {
-                              return DropdownMenuItem(
-                                value: type,
-                                child: Text(type),
-                              );
-                            }).toList(),
-                            onChanged: (value) => setState(
-                              () => _items[index]['storage_type'] = value!,
+                            child: DropdownButton<String>(
+                              value: _items[index]['storage_type'] ?? '냉장',
+                              isExpanded: true,
+                              underline: const SizedBox(),
+                              items: ['냉장', '냉동', '실온'].map((type) {
+                                return DropdownMenuItem(
+                                  value: type,
+                                  child: Text(type),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setState(() {
+                                    _items[index] = Map<String, dynamic>.from(
+                                      _items[index],
+                                    );
+                                    _items[index]['storage_type'] = value;
+                                  });
+                                }
+                              },
                             ),
                           ),
                         ),
