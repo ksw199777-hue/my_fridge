@@ -323,10 +323,16 @@ def estimate_price(items: list) -> dict:
     message = client.messages.create(
         model="claude-opus-4-5",
         max_tokens=1024,
+        tools=[
+            {
+                "type": "web_search_20250305",
+                "name": "web_search"
+            }
+        ],
         messages=[
             {
                 "role": "user",
-                "content": f"""다음 식재료들의 한국 마트 기준 평균 가격을 알려주세요.
+                "content": f"""한국 대형마트(이마트, 롯데마트, 홈플러스) 기준 현재 시세를 웹에서 검색해서 다음 식재료들의 평균 가격을 알려주세요.
 
 식재료 목록: {item_names}
 
@@ -349,7 +355,13 @@ def estimate_price(items: list) -> dict:
     
     import json
     import re
-    response_text = message.content[0].text
+    
+    response_text = ""
+    for block in message.content:
+        if hasattr(block, "text"):
+            response_text = block.text
+            break
+    
     json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
     if json_match:
         return json.loads(json_match.group())
