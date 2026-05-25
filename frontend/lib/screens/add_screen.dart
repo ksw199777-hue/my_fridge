@@ -81,6 +81,8 @@ Future<void> _saveAllIngredients() async {
 
   int successCount = 0;
   for (var item in _pendingIngredients) {
+    print('저장 시도: ${item['name']}, storage_type: ${item['storage_type']}');
+
     int consumeDays = 7;
     if (item['consume_date'] != null) {
       try {
@@ -101,7 +103,7 @@ Future<void> _saveAllIngredients() async {
       price: item['price'] ?? 0,
       location: item['storage_type'] ?? '냉장',
       storageType: item['storage_type'] ?? '냉장',
-      hasExpiryLabel: item['has_expiry_label'] ?? false,
+      hasExpiryLabel: (item['has_expiry_label'] == true || item['has_expiry_label'] == 1),
     );
     if (success) successCount++;
   }
