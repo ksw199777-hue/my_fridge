@@ -156,132 +156,84 @@ def root():
     return {"message": "나만의 냉장고 API 시작!"}
 
 @app.post("/recognize")
-async def recognize(file: UploadFile = File(...), fridge_id: int = None, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+async def recognize_camera(file: UploadFile = File(...), fridge_id: int = None, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
     image_bytes = await file.read()
     if not fridge_id:
         my_fridge = db.query(Fridge).filter(Fridge.owner_id == current_user.id).first()
         if not my_fridge:
-            raise HTTPException(status_code=404, detail="냉장고가 없어요. 냉장고를 먼저 만들어주세요!")
+            raise HTTPException(status_code=404, detail="냉장고가 없어요!")
         fridge_id = my_fridge.id
     ingredients = recognize_ingredients(image_bytes)
-    saved = []
-    for item in ingredients:
-        expiry_days = item.get("expiry_days")
-        consume_days = item.get("consume_days") or 7
-        has_expiry_label = item.get("has_expiry_label", False)
-        ingredient = Ingredient(
-            name=item["name"],
-            registered_date=date.today(),
-            expiry_date=date.today() + timedelta(days=expiry_days) if expiry_days else None,
-            consume_date=date.today() + timedelta(days=consume_days),
-            has_expiry_label=1 if has_expiry_label else 0,
-            price=0,
-            location="냉장",
-            fridge_id=fridge_id
-        )
-        db.add(ingredient)
-        db.commit()
-        db.refresh(ingredient)
-        save_purchase_history(db, ingredient)
-        saved.append({
-            "id": ingredient.id,
-            "name": ingredient.name,
-            "registered_date": ingredient.registered_date,
-            "expiry_date": ingredient.expiry_date,
-            "consume_date": ingredient.consume_date,
-            "has_expiry_label": ingredient.has_expiry_label,
-            "price": ingredient.price,
-            "location": ingredient.location
-        })
     return {
-        "ingredients": saved,
+        "ingredients": [
+            {
+                "name": item["name"],
+                "expiry_days": item.get("expiry_days"),
+                "consume_days": item.get("consume_days") or 7,
+                "has_expiry_label": item.get("has_expiry_label", False),
+                "price": 0,
+                "location": "냉장",
+                "storage_type": "냉장",
+            }
+            for item in ingredients
+        ],
         "message": "유통기한 표시가 없는 재료는 오늘 기준으로 소비기한을 산출했어요! 냉장고 탭에서 수정 가능해요 ✏️"
     }
-
+    
 @app.post("/recognize/screenshot")
-async def recognize(file: UploadFile = File(...), fridge_id: int = None, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+async def recognize_screenshot(file: UploadFile = File(...), fridge_id: int = None, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
     image_bytes = await file.read()
     if not fridge_id:
         my_fridge = db.query(Fridge).filter(Fridge.owner_id == current_user.id).first()
         if not my_fridge:
-            raise HTTPException(status_code=404, detail="냉장고가 없어요. 냉장고를 먼저 만들어주세요!")
+            raise HTTPException(status_code=404, detail="냉장고가 없어요!")
         fridge_id = my_fridge.id
     ingredients = recognize_from_screenshot(image_bytes)
-    saved = []
-    for item in ingredients:
-        consume_days = item.get("consume_days") or 7
-        ingredient = Ingredient(
-            name=item["name"],
-            registered_date=date.today(),
-            expiry_date=None,
-            consume_date=date.today() + timedelta(days=consume_days),
-            has_expiry_label=0,
-            price=item.get("price", 0),
-            location="냉장",
-            fridge_id=fridge_id
-        )
-        db.add(ingredient)
-        db.commit()
-        db.refresh(ingredient)
-        save_purchase_history(db, ingredient)
-        saved.append({
-            "id": ingredient.id,
-            "name": ingredient.name,
-            "quantity": item.get("quantity", 1),
-            "registered_date": ingredient.registered_date,
-            "expiry_date": ingredient.expiry_date,
-            "consume_date": ingredient.consume_date,
-            "has_expiry_label": ingredient.has_expiry_label,
-            "price": ingredient.price,
-            "location": ingredient.location
-        })
     return {
-        "ingredients": saved,
+        "ingredients": [
+            {
+                "name": item["name"],
+                "expiry_days": None,
+                "consume_days": item.get("consume_days") or 7,
+                "consume_date": item.get("consume_date"),
+                "has_expiry_label": False,
+                "price": item.get("price", 0),
+                "location": "냉장",
+                "storage_type": "냉장",
+                "quantity": item.get("quantity", 1),
+            }
+            for item in ingredients
+        ],
         "message": "유통기한 표시가 없어 오늘을 기준으로 소비기한을 산출했어요! 냉장고 탭에서 수정 가능해요 ✏️"
     }
 
 @app.post("/recognize/receipt")
-async def recognize(file: UploadFile = File(...), fridge_id: int = None, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+async def recognize_receipt_upload(file: UploadFile = File(...), fridge_id: int = None, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
     image_bytes = await file.read()
     if not fridge_id:
         my_fridge = db.query(Fridge).filter(Fridge.owner_id == current_user.id).first()
         if not my_fridge:
-            raise HTTPException(status_code=404, detail="냉장고가 없어요. 냉장고를 먼저 만들어주세요!")
+            raise HTTPException(status_code=404, detail="냉장고가 없어요!")
         fridge_id = my_fridge.id
     ingredients = recognize_receipt(image_bytes)
-    saved = []
-    for item in ingredients:
-        consume_days = item.get("consume_days") or 7
-        ingredient = Ingredient(
-            name=item["name"],
-            registered_date=date.today(),
-            expiry_date=None,
-            consume_date=date.today() + timedelta(days=consume_days),
-            has_expiry_label=0,
-            price=item.get("price", 0),
-            location="냉장",
-            fridge_id=fridge_id
-        )
-        db.add(ingredient)
-        db.commit()
-        db.refresh(ingredient)
-        save_purchase_history(db, ingredient)
-        saved.append({
-            "id": ingredient.id,
-            "name": ingredient.name,
-            "quantity": item.get("quantity", 1),
-            "registered_date": ingredient.registered_date,
-            "expiry_date": ingredient.expiry_date,
-            "consume_date": ingredient.consume_date,
-            "has_expiry_label": ingredient.has_expiry_label,
-            "price": ingredient.price,
-            "location": ingredient.location
-        })
     return {
-        "ingredients": saved,
+        "ingredients": [
+            {
+                "name": item["name"],
+                "expiry_days": None,
+                "consume_days": item.get("consume_days") or 7,
+                "consume_date": item.get("consume_date"),
+                "has_expiry_label": False,
+                "price": item.get("price", 0),
+                "location": "냉장",
+                "storage_type": "냉장",
+                "quantity": item.get("quantity", 1),
+            }
+            for item in ingredients
+        ],
         "message": "유통기한 표시가 없어 오늘을 기준으로 소비기한을 산출했어요! 냉장고 탭에서 수정 가능해요 ✏️"
     }
-
+    
 @app.get("/ingredients")
 def get_ingredients(
     fridge_id: int = None,
@@ -373,16 +325,6 @@ def search_ingredients(keyword: str, db: Session = Depends(get_db)):
         }
         for i in ingredients
     ]}
-
-@app.delete("/ingredients/{ingredient_id}")
-def delete_ingredient(ingredient_id: int, db: Session = Depends(get_db)):
-    ingredient = db.query(Ingredient).filter(Ingredient.id == ingredient_id).first()
-    if not ingredient:
-        raise HTTPException(status_code=404, detail="재료를 찾을 수 없어요")
-    db.delete(ingredient)
-    db.commit()
-    return {"message": f"{ingredient.name} 삭제됐어요!"}
-
 class IngredientCreate(BaseModel):
     name: str
     expiry_days: Optional[int] = None

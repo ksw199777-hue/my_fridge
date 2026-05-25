@@ -18,19 +18,25 @@ class FridgeDetailScreen extends StatefulWidget {
 
 class _FridgeDetailScreenState extends State<FridgeDetailScreen> {
   Map<String, dynamic> _fridgeData = {};
+  Map<String, dynamic> _userInfo = {};
   bool _isLoading = true;
+  int _extraMembers = 0;
+  final _inviteCodeController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _loadMembers();
+    _loadData();
   }
 
-  Future<void> _loadMembers() async {
+  Future<void> _loadData() async {
     setState(() => _isLoading = true);
     final data = await ApiService.getFridgeMembers(widget.fridgeId);
+    final userInfo = await ApiService.getMe();
     setState(() {
       _fridgeData = data;
+      _userInfo = userInfo;
+      _extraMembers = userInfo['extra_members'] ?? 0;
       _isLoading = false;
     });
   }
@@ -48,7 +54,8 @@ class _FridgeDetailScreenState extends State<FridgeDetailScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red, foregroundColor: Colors.white),
             child: const Text('내보내기'),
           ),
         ],
@@ -57,12 +64,13 @@ class _FridgeDetailScreenState extends State<FridgeDetailScreen> {
 
     if (confirmed != true) return;
 
-    final success = await ApiService.removeFridgeMember(widget.fridgeId, userId);
+    final success =
+        await ApiService.removeFridgeMember(widget.fridgeId, userId);
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('$username 님을 내보냈어요!')),
       );
-      _loadMembers();
+      _loadData();
     }
   }
 
@@ -73,11 +81,30 @@ class _FridgeDetailScreenState extends State<FridgeDetailScreen> {
     );
   }
 
+  Future<void> _updateExtraMembers(int newExtra) async {
+    final subscriptionType = _userInfo['subscription_type'] ?? 'free';
+    final success = await ApiService.updateSubscription(
+      subscriptionType: subscriptionType,
+      extraMembers: newExtra,
+    );
+    if (success && mounted) {
+      setState(() => _extraMembers = newExtra);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('추가 인원이 ${newExtra}명으로 변경됐어요! (월 ${5000 + newExtra * 1000}원)')),
+      );
+    }
+  }
+
+  int _getTeamPrice() => 5000 + (_extraMembers * 1000);
+
   @override
   Widget build(BuildContext context) {
     final isOwner = _fridgeData['is_owner'] ?? false;
     final members = _fridgeData['members'] as List<dynamic>? ?? [];
     final inviteCode = _fridgeData['invite_code'];
+    final subscriptionType = _userInfo['subscription_type'] ?? 'free';
+    final isTeamPlan = subscriptionType == 'team';
+    final trialUsed = _userInfo['trial_used'] ?? 0;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -133,24 +160,78 @@ class _FridgeDetailScreenState extends State<FridgeDetailScreen> {
                           ),
                           const Text(
                             '이 코드를 공유하면 냉장고에 초대할 수 있어요',
-                            style:
-                                TextStyle(fontSize: 12, color: Colors.grey),
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // 팀플랜 추가 인원 변경 (오너 + 팀플랜만)
+                  if (isOwner && isTeamPlan) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF7BC67E).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                            color: const Color(0xFF7BC67E).withOpacity(0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('👨‍👩‍👧‍👦 팀 플랜 인원 관리',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 16)),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              const Text('추가 인원: ',
+                                  style:
+                                      TextStyle(fontWeight: FontWeight.bold)),
+                              const Text('(1명당 +1,000원, 최대 2명)'),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              IconButton(
+                                onPressed: _extraMembers > 0
+                                    ? () => _updateExtraMembers(_extraMembers - 1)
+                                    : null,
+                                icon: const Icon(Icons.remove_circle_outline),
+                                color: const Color(0xFF7BC67E),
+                              ),
+                              Text('$_extraMembers명',
+                                  style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold)),
+                              IconButton(
+                                onPressed: _extraMembers < 2
+                                    ? () => _updateExtraMembers(_extraMembers + 1)
+                                    : null,
+                                icon: const Icon(Icons.add_circle_outline),
+                                color: const Color(0xFF7BC67E),
+                              ),
+                              Text(
+                                '(총 ${4 + _extraMembers}명 / 월 ${_getTeamPrice()}원)',
+                                style: const TextStyle(color: Colors.grey, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                   ],
 
                   // 멤버 목록
-                  Row(
-                    children: [
-                      Text(
-                        '👥 멤버 (${members.length}명)',
-                        style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                    ],
+                  Text(
+                    '👥 멤버 (${members.length}명)',
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
                   ListView.builder(

@@ -14,7 +14,7 @@ def recognize_ingredients(image_bytes: bytes) -> list:
     image_base64 = base64.standard_b64encode(image_bytes).decode("utf-8")
     
     message = client.messages.create(
-        model="claude-opus-4-5",
+        model="claude-opus-4-5-20251101",
         max_tokens=1024,
         messages=[
             {
@@ -110,7 +110,7 @@ def recognize_from_screenshot(image_bytes: bytes) -> list:
     image_base64 = base64.standard_b64encode(image_bytes).decode("utf-8")
     
     message = client.messages.create(
-        model="claude-opus-4-5",
+        model="claude-opus-4-5-20251101",
         max_tokens=1024,
         messages=[
             {
