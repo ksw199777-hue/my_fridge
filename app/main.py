@@ -393,6 +393,7 @@ class IngredientCreate(BaseModel):
 
 @app.post("/ingredients")
 def create_ingredient(item: IngredientCreate, fridge_id: int, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+    print(f"받은 데이터: {item}")
     check_fridge_limit(current_user, db)
     
     # 소비기한 비워두면 AI 자동 산출
