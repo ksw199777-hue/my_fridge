@@ -129,7 +129,7 @@ async def recognize(file: UploadFile = File(...), fridge_id: int = None, current
             consume_date=date.today() + timedelta(days=consume_days),
             has_expiry_label=1 if has_expiry_label else 0,
             price=0,
-            location="냉장"
+            location="냉장",
             fridge_id=fridge_id
         )
         db.add(ingredient)
@@ -170,7 +170,7 @@ async def recognize(file: UploadFile = File(...), fridge_id: int = None, current
             consume_date=date.today() + timedelta(days=consume_days),
             has_expiry_label=0,
             price=item.get("price", 0),
-            location="냉장"
+            location="냉장",
             fridge_id=fridge_id
         )
         db.add(ingredient)
@@ -212,7 +212,7 @@ async def recognize(file: UploadFile = File(...), fridge_id: int = None, current
             consume_date=date.today() + timedelta(days=consume_days),
             has_expiry_label=0,
             price=item.get("price", 0),
-            location="냉장"
+            location="냉장",
             fridge_id=fridge_id
         )
         db.add(ingredient)
