@@ -17,6 +17,52 @@ import os
 
 load_dotenv()
 
+# 플랜별 제한 설정
+PLAN_LIMITS = {
+    "free":    {"fridges": 1, "members": 1},
+    "premium": {"fridges": 2, "members": 2},
+    "team":    {"fridges": 3, "members": 4},  # extra_members로 최대 6명까지
+    "vip":     {"fridges": 999, "members": 999},
+}
+
+def get_max_members(user: User) -> int:
+    if user.subscription_type == "team":
+        return 4 + user.extra_members  # 기본 4명 + 추가 인원
+    return PLAN_LIMITS.get(user.subscription_type, {"members": 1})["members"]
+
+def check_ai_permission(current_user: User, fridge_id: int, db: Session):
+    """AI 기능 사용 권한 체크"""
+    if current_user.subscription_type == "vip":
+        return True  # VIP는 본인 포함 멤버 전원 가능
+    
+    if current_user.subscription_type in ["premium", "team"]:
+        return True  # 구독자 본인만 가능
+    
+    # free면 냉장고 오너가 vip인지 체크
+    if fridge_id:
+        fridge = db.query(Fridge).filter(Fridge.id == fridge_id).first()
+        if fridge:
+            owner = db.query(User).filter(User.id == fridge.owner_id).first()
+            if owner and owner.subscription_type == "vip":
+                return True
+    
+    return False
+
+def check_fridge_limit(current_user: User, db: Session):
+    """냉장고 대수 제한 체크"""
+    max_fridges = PLAN_LIMITS.get(current_user.subscription_type, {"fridges": 1})["fridges"]
+    current_count = db.query(Fridge).filter(Fridge.owner_id == current_user.id).count()
+    if current_count >= max_fridges:
+        raise HTTPException(status_code=403, detail=f"현재 플랜에서는 냉장고를 {max_fridges}대까지만 만들 수 있어요!")
+
+def check_member_limit(fridge: Fridge, current_user: User, db: Session):
+    """공유 인원 제한 체크"""
+    owner = db.query(User).filter(User.id == fridge.owner_id).first()
+    max_members = get_max_members(owner)
+    current_count = db.query(FridgeMember).filter(FridgeMember.fridge_id == fridge.id).count()
+    if current_count >= max_members - 1:  # 오너 포함이라 -1
+        raise HTTPException(status_code=403, detail=f"현재 플랜에서는 최대 {max_members}명까지 공유할 수 있어요!")
+
 app = FastAPI(title="나만의 냉장고 API")
 
 app.add_middleware(
@@ -408,8 +454,8 @@ def update_ingredient(ingredient_id: int, item: IngredientUpdate, db: Session = 
     }
 
 @app.get("/recipes")
-def get_recipes(current_user: User = Depends(require_user), db: Session = Depends(get_db)):
-    if current_user.subscription_type == "free":
+def get_recipes(fridge_id: int = None, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+    if not check_ai_permission(current_user, fridge_id, db):
         raise HTTPException(status_code=403, detail="프리미엄 기능이에요! 업그레이드가 필요해요 ⭐")
     
     ingredients = db.query(Ingredient).all()
@@ -422,8 +468,8 @@ class RecipeChatRequest(BaseModel):
     message: str
 
 @app.post("/recipe/chat")
-async def recipe_chat(request: RecipeChatRequest, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
-    if current_user.subscription_type == "free":
+async def recipe_chat(request: RecipeChatRequest, fridge_id: int = None, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+    if not check_ai_permission(current_user, fridge_id, db):
         raise HTTPException(status_code=403, detail="프리미엄 기능이에요! 업그레이드가 필요해요 ⭐")
     
     ingredients = db.query(Ingredient).all()
@@ -572,8 +618,8 @@ def get_statistics(db: Session = Depends(get_db)):
     }
 
 @app.get("/shopping/estimate")
-def estimate_shopping_price(current_user: User = Depends(require_user), db: Session = Depends(get_db)):
-    if current_user.subscription_type == "free":
+def estimate_shopping_price(fridge_id: int = None, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+    if not check_ai_permission(current_user, fridge_id, db):
         raise HTTPException(status_code=403, detail="프리미엄 기능이에요! 업그레이드가 필요해요 ⭐")
     
     items = db.query(ShoppingItem).filter(ShoppingItem.is_purchased == 0).all()
@@ -657,11 +703,20 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
 
 @app.get("/auth/me")
 def get_me(current_user: User = Depends(require_user)):
-    return {"id": current_user.id, "email": current_user.email, "username": current_user.username}
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "username": current_user.username,
+        "subscription_type": current_user.subscription_type,
+        "subscription_expires": current_user.subscription_expires,
+        "extra_members": current_user.extra_members,
+        "trial_used": current_user.trial_used
+    }
 
 # 냉장고 관련 API
 @app.post("/fridges")
 def create_fridge(fridge: FridgeCreate, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+    check_fridge_limit(current_user, db)
     new_fridge = Fridge(
         name=fridge.name,
         invite_code=generate_invite_code(),
@@ -691,6 +746,8 @@ def join_fridge(invite_code: str, current_user: User = Depends(require_user), db
     fridge = db.query(Fridge).filter(Fridge.invite_code == invite_code).first()
     if not fridge:
         raise HTTPException(status_code=404, detail="초대 코드가 올바르지 않아요")
+    
+    check_member_limit(fridge, current_user, db)
     
     # 이미 멤버인지 체크
     existing = db.query(FridgeMember).filter(
@@ -735,3 +792,38 @@ def update_fcm_token(token: FCMTokenUpdate, current_user: User = Depends(require
     current_user.fcm_token = token.fcm_token
     db.commit()
     return {"message": "FCM 토큰 저장됐어요!"}
+
+class SubscriptionUpdate(BaseModel):
+    subscription_type: str  # premium / team / vip
+    extra_members: int = 0  # 팀플랜 추가 인원
+
+@app.post("/auth/subscription")
+def update_subscription(data: SubscriptionUpdate, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+    valid_plans = ["free", "premium", "team", "vip"]
+    if data.subscription_type not in valid_plans:
+        raise HTTPException(status_code=400, detail="올바르지 않은 플랜이에요")
+    
+    # 팀플랜 추가 인원 검증 (0~2명만 가능, 최대 6명)
+    if data.subscription_type == "team" and not (0 <= data.extra_members <= 2):
+        raise HTTPException(status_code=400, detail="추가 인원은 0~2명만 가능해요")
+    
+    from datetime import date
+    from dateutil.relativedelta import relativedelta
+    
+    # 무료체험 처리
+    if current_user.trial_used == 0:
+        current_user.subscription_expires = date.today() + relativedelta(months=2)  # 1개월 무료 + 1개월
+        current_user.trial_used = 1
+    else:
+        current_user.subscription_expires = date.today() + relativedelta(months=1)
+    
+    current_user.subscription_type = data.subscription_type
+    current_user.extra_members = data.extra_members
+    db.commit()
+    
+    return {
+        "message": f"{data.subscription_type} 플랜으로 변경됐어요!",
+        "subscription_type": current_user.subscription_type,
+        "subscription_expires": current_user.subscription_expires,
+        "trial_used": current_user.trial_used
+    }
