@@ -69,74 +69,54 @@ class _AddScreenState extends State<AddScreen> {
     }
   }
 
-  Future<void> _saveAllIngredients() async {
-    if (_pendingIngredients.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('저장할 재료가 없어요!')));
-      return;
-    }
-
-    // 보관방법 선택창
-    List<Map<String, dynamic>>? updatedIngredients;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => _StorageTypeDialog(
-        ingredients: _pendingIngredients,
-        onConfirm: (updated) {
-          updatedIngredients = updated;
-        },
-      ),
+Future<void> _saveAllIngredients() async {
+  if (_pendingIngredients.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('저장할 재료가 없어요!')),
     );
+    return;
+  }
 
-    if (confirmed != true) return;
+  setState(() => _isLoading = true);
 
-    // 다이얼로그 닫힌 후에 업데이트
-    if (updatedIngredients != null) {
-      _pendingIngredients = updatedIngredients!;
-    }
-
-    setState(() => _isLoading = true);
-
-    int successCount = 0;
-    for (var item in _pendingIngredients) {
-      // consume_date가 날짜 문자열로 오면 오늘부터 일수로 변환
-      int consumeDays = 7;
-      if (item['consume_date'] != null) {
-        try {
-          final consumeDate = DateTime.parse(item['consume_date']);
-          final today = DateTime.now();
-          consumeDays = consumeDate.difference(today).inDays;
-          if (consumeDays < 0) consumeDays = 0;
-        } catch (e) {
-          consumeDays = item['consume_days'] ?? 7;
-        }
-      } else {
+  int successCount = 0;
+  for (var item in _pendingIngredients) {
+    int consumeDays = 7;
+    if (item['consume_date'] != null) {
+      try {
+        final consumeDate = DateTime.parse(item['consume_date']);
+        final today = DateTime.now();
+        consumeDays = consumeDate.difference(today).inDays;
+        if (consumeDays < 0) consumeDays = 0;
+      } catch (e) {
         consumeDays = item['consume_days'] ?? 7;
       }
-
-      final success = await ApiService.addIngredient(
-        name: item['name'],
-        consumeDays: consumeDays,
-        price: item['price'] ?? 0,
-        location: item['storage_type'] ?? '냉장',
-        storageType: item['storage_type'] ?? '냉장',
-        hasExpiryLabel: item['has_expiry_label'] ?? false,
-      );
-      if (success) successCount++;
+    } else {
+      consumeDays = item['consume_days'] ?? 7;
     }
 
-    setState(() {
-      _isLoading = false;
-      _pendingIngredients = [];
-    });
-
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('$successCount개 재료가 저장됐어요! 🎉')));
-    }
+    final success = await ApiService.addIngredient(
+      name: item['name'],
+      consumeDays: consumeDays,
+      price: item['price'] ?? 0,
+      location: item['storage_type'] ?? '냉장',
+      storageType: item['storage_type'] ?? '냉장',
+      hasExpiryLabel: item['has_expiry_label'] ?? false,
+    );
+    if (success) successCount++;
   }
+
+  setState(() {
+    _isLoading = false;
+    _pendingIngredients = [];
+  });
+
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$successCount개 재료가 저장됐어요! 🎉')),
+    );
+  }
+}
 
   Future<void> _addManually() async {
     if (_nameController.text.isEmpty) {
@@ -272,20 +252,88 @@ class _AddScreenState extends State<AddScreen> {
                         final item = _pendingIngredients[index];
                         return Card(
                           margin: const EdgeInsets.only(bottom: 8),
-                          child: ListTile(
-                            leading: const Icon(
-                              Icons.food_bank,
-                              color: Color(0xFF4A90D9),
-                            ),
-                            title: Text(item['name']),
-                            subtitle: Text(
-                              '소비기한: ${item['consume_date'] ?? '자동산출'} · ${item['storage_type']}',
-                            ),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.close, color: Colors.red),
-                              onPressed: () => setState(
-                                () => _pendingIngredients.removeAt(index),
-                              ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.food_bank,
+                                  color: Color(0xFF4A90D9),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item['name'],
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Text(
+                                        '소비기한: ${item['consume_date'] ?? '자동산출'}',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                // 보관방법 드롭다운
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: DropdownButton<String>(
+                                    value:
+                                        _pendingIngredients[index]['storage_type'] ??
+                                        '냉장',
+                                    underline: const SizedBox(),
+                                    isDense: true,
+                                    items: ['냉장', '냉동', '실온'].map((type) {
+                                      return DropdownMenuItem(
+                                        value: type,
+                                        child: Text(
+                                          type,
+                                          style: const TextStyle(fontSize: 13),
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (value) {
+                                      if (value != null) {
+                                        setState(() {
+                                          _pendingIngredients[index] =
+                                              Map<String, dynamic>.from(
+                                                _pendingIngredients[index],
+                                              );
+                                          _pendingIngredients[index]['storage_type'] =
+                                              value;
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ),
+                                // 삭제 버튼
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: Colors.red,
+                                    size: 18,
+                                  ),
+                                  onPressed: () => setState(
+                                    () => _pendingIngredients.removeAt(index),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         );
@@ -441,133 +489,6 @@ class _AddScreenState extends State<AddScreen> {
                 ],
               ),
             ),
-    );
-  }
-}
-
-// 보관방법 선택 다이얼로그
-class _StorageTypeDialog extends StatefulWidget {
-  final List<Map<String, dynamic>> ingredients;
-  final Function(List<Map<String, dynamic>>) onConfirm;
-
-  const _StorageTypeDialog({
-    required this.ingredients,
-    required this.onConfirm,
-  });
-
-  @override
-  State<_StorageTypeDialog> createState() => _StorageTypeDialogState();
-}
-
-class _StorageTypeDialogState extends State<_StorageTypeDialog> {
-  late List<Map<String, dynamic>> _items;
-
-  @override
-  void initState() {
-    super.initState();
-    // 깊은 복사로 변경
-    _items = widget.ingredients
-        .map((e) => Map<String, dynamic>.from(e))
-        .toList();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text('보관 방법 확인'),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Row(
-              children: [
-                Icon(Icons.info_outline, size: 14, color: Colors.grey),
-                SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    '식품위생법 및 식약처 기준을 참고합니다',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: _items.length,
-                itemBuilder: (context, index) {
-                  final item = _items[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: Text(
-                            item['name'],
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        Expanded(
-                          flex: 3,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: DropdownButton<String>(
-                              value: _items[index]['storage_type'] ?? '냉장',
-                              isExpanded: true,
-                              underline: const SizedBox(),
-                              items: ['냉장', '냉동', '실온'].map((type) {
-                                return DropdownMenuItem(
-                                  value: type,
-                                  child: Text(type),
-                                );
-                              }).toList(),
-                              onChanged: (value) {
-                                if (value != null) {
-                                  setState(() {
-                                    _items[index] = Map<String, dynamic>.from(
-                                      _items[index],
-                                    );
-                                    _items[index]['storage_type'] = value;
-                                  });
-                                }
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text('취소'),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            widget.onConfirm(_items);
-            Navigator.pop(context, true);
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF4A90D9),
-            foregroundColor: Colors.white,
-          ),
-          child: const Text('저장하기'),
-        ),
-      ],
     );
   }
 }
