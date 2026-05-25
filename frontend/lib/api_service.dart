@@ -419,7 +419,6 @@ class ApiService {
       body: jsonEncode({'fcm_token': token}),
     );
   }
-}
 
   // 소비기한 계산
   static Future<int> calculateConsumeDays({
@@ -458,3 +457,4 @@ class ApiService {
     );
     return response.statusCode == 200;
   }
+}
