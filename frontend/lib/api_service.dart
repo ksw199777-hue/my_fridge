@@ -88,6 +88,26 @@ class ApiService {
     return jsonDecode(utf8.decode(response.bodyBytes));
   }
 
+  // 구독 플랜 변경
+  static Future<bool> updateSubscription({
+    required String subscriptionType,
+    int extraMembers = 0,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/subscription'),
+      headers: _headers,
+      body: jsonEncode({
+        'subscription_type': subscriptionType,
+        'extra_members': extraMembers,
+      }),
+    );
+    if (response.statusCode == 200) {
+      _subscriptionType = subscriptionType;
+      return true;
+    }
+    return false;
+  }
+  
   // 냉장고 목록
   static Future<List<dynamic>> getFridges() async {
     final response = await http.get(
