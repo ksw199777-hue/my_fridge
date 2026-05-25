@@ -858,3 +858,55 @@ def calculate_consume_days(request: StorageTypeRequest, current_user: User = Dep
     from app.ai import get_consume_days_by_storage
     days = get_consume_days_by_storage(request.name, request.storage_type)
     return {"consume_days": days}
+
+@app.get("/fridges/{fridge_id}/members")
+def get_fridge_members(fridge_id: int, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+    fridge = db.query(Fridge).filter(Fridge.id == fridge_id).first()
+    if not fridge:
+        raise HTTPException(status_code=404, detail="냉장고를 찾을 수 없어요")
+    
+    # 오너 정보
+    owner = db.query(User).filter(User.id == fridge.owner_id).first()
+    members = db.query(FridgeMember).filter(FridgeMember.fridge_id == fridge_id).all()
+    
+    member_list = [{
+        "id": owner.id,
+        "username": owner.username,
+        "email": owner.email,
+        "is_owner": True
+    }]
+    
+    for m in members:
+        user = db.query(User).filter(User.id == m.user_id).first()
+        if user:
+            member_list.append({
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "is_owner": False
+            })
+    
+    return {
+        "fridge_id": fridge_id,
+        "fridge_name": fridge.name,
+        "invite_code": fridge.invite_code if fridge.owner_id == current_user.id else None,
+        "is_owner": fridge.owner_id == current_user.id,
+        "members": member_list
+    }
+
+@app.delete("/fridges/{fridge_id}/members/{user_id}")
+def remove_fridge_member(fridge_id: int, user_id: int, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+    fridge = db.query(Fridge).filter(Fridge.id == fridge_id, Fridge.owner_id == current_user.id).first()
+    if not fridge:
+        raise HTTPException(status_code=403, detail="권한이 없어요")
+    
+    member = db.query(FridgeMember).filter(
+        FridgeMember.fridge_id == fridge_id,
+        FridgeMember.user_id == user_id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="멤버를 찾을 수 없어요")
+    
+    db.delete(member)
+    db.commit()
+    return {"message": "멤버를 내보냈어요!"}

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../api_service.dart';
 import '../main.dart';
 import 'package:flutter/services.dart';
+import 'fridge_detail_screen.dart';
 
 class FridgeSelectScreen extends StatefulWidget {
   const FridgeSelectScreen({super.key});
@@ -171,6 +172,23 @@ class _FridgeSelectScreenState extends State<FridgeSelectScreen> {
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.people,
+                                  color: Color(0xFF4A90D9),
+                                ),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => FridgeDetailScreen(
+                                        fridgeId: fridge['id'],
+                                        fridgeName: fridge['name'],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
                               ElevatedButton(
                                 onPressed: () => _selectFridge(fridge['id']),
                                 style: ElevatedButton.styleFrom(
