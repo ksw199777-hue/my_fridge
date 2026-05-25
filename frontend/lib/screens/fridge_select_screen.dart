@@ -118,6 +118,18 @@ class _FridgeSelectScreenState extends State<FridgeSelectScreen> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: ListTile(
+                          onTap: () {
+                            // ← 추가
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => FridgeDetailScreen(
+                                  fridgeId: fridge['id'],
+                                  fridgeName: fridge['name'],
+                                ),
+                              ),
+                            );
+                          },
                           leading: const Text(
                             '🧊',
                             style: TextStyle(fontSize: 28),
@@ -172,23 +184,6 @@ class _FridgeSelectScreenState extends State<FridgeSelectScreen> {
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.people,
-                                  color: Color(0xFF4A90D9),
-                                ),
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => FridgeDetailScreen(
-                                        fridgeId: fridge['id'],
-                                        fridgeName: fridge['name'],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
                               ElevatedButton(
                                 onPressed: () => _selectFridge(fridge['id']),
                                 style: ElevatedButton.styleFrom(

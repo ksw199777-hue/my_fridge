@@ -138,13 +138,37 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<void> _deleteSelected() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
+Future<void> _deleteSelected() async {
+  bool deleteHistory = false;
+  final confirm = await showDialog<bool>(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setDialogState) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('재료 삭제'),
-        content: Text('선택한 ${_selectedIds.length}개 재료를 삭제할까요?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('선택한 ${_selectedIds.length}개 재료를 삭제할까요?'),
+            const SizedBox(height: 16),
+            RadioListTile<bool>(
+              title: const Text('식재료비 유지'),
+              subtitle: const Text('가계부 금액은 그대로 남아요'),
+              value: false,
+              groupValue: deleteHistory,
+              onChanged: (val) => setDialogState(() => deleteHistory = val!),
+              activeColor: const Color(0xFF4A90D9),
+            ),
+            RadioListTile<bool>(
+              title: const Text('식재료비도 함께 삭제'),
+              subtitle: const Text('가계부에서 금액도 제거돼요'),
+              value: true,
+              groupValue: deleteHistory,
+              onChanged: (val) => setDialogState(() => deleteHistory = val!),
+              activeColor: Colors.red,
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -156,19 +180,20 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-    );
+    ),
+  );
 
-    if (confirm == true) {
-      for (final id in _selectedIds) {
-        await ApiService.deleteIngredient(id);
-      }
-      setState(() {
-        _isSelectionMode = false;
-        _selectedIds.clear();
-      });
-      _loadIngredients();
+  if (confirm == true) {
+    for (final id in _selectedIds) {
+      await ApiService.deleteIngredient(id, deleteHistory: deleteHistory);
     }
+    setState(() {
+      _isSelectionMode = false;
+      _selectedIds.clear();
+    });
+    _loadIngredients();
   }
+}
 
   void _showIngredientDetail(dynamic item) {
     final dDay = item['d_day'] as int;
@@ -311,14 +336,25 @@ class _HomeScreenState extends State<HomeScreen> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () async {
+                      // 보관방법 바뀌었으면 소비기한 AI 재계산
+                      int? newConsumeDays;
+                      if (consumeController.text.isNotEmpty) {
+                        newConsumeDays = int.parse(consumeController.text);
+                      } else if (selectedLocation != item['location']) {
+                        // 보관방법 바뀌면 AI로 재계산
+                        newConsumeDays = await ApiService.calculateConsumeDays(
+                          name: item['name'],
+                          storageType: selectedLocation,
+                        );
+                      }
+
                       await ApiService.updateIngredient(
                         item['id'],
                         name: nameController.text,
-                        consumeDays: consumeController.text.isNotEmpty
-                            ? int.parse(consumeController.text)
-                            : null,
+                        consumeDays: newConsumeDays,
                         price: int.tryParse(priceController.text),
                         location: selectedLocation,
+                        storageType: selectedLocation, // ← 추가
                       );
                       Navigator.pop(context);
                       _loadIngredients();
