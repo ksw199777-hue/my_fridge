@@ -420,3 +420,23 @@ class ApiService {
     );
   }
 }
+
+  // 소비기한 계산
+  static Future<int> calculateConsumeDays({
+    required String name,
+    required String storageType,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/ingredients/calculate-consume-days'),
+      headers: _headers,
+      body: jsonEncode({
+        'name': name,
+        'storage_type': storageType,
+      }),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      return data['consume_days'] ?? 7;
+    }
+    return 7;
+  }

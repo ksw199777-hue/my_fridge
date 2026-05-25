@@ -848,3 +848,13 @@ def update_subscription(data: SubscriptionUpdate, current_user: User = Depends(r
         "subscription_expires": current_user.subscription_expires,
         "trial_used": current_user.trial_used
     }
+    
+class StorageTypeRequest(BaseModel):
+    name: str
+    storage_type: str
+
+@app.post("/ingredients/calculate-consume-days")
+def calculate_consume_days(request: StorageTypeRequest, current_user: User = Depends(require_user)):
+    from app.ai import get_consume_days_by_storage
+    days = get_consume_days_by_storage(request.name, request.storage_type)
+    return {"consume_days": days}

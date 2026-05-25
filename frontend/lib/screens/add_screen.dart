@@ -81,7 +81,6 @@ class _AddScreenState extends State<AddScreen> {
 
     int successCount = 0;
     for (var item in _pendingIngredients) {
-
       int consumeDays = 7;
       if (item['consume_date'] != null) {
         try {
@@ -94,6 +93,13 @@ class _AddScreenState extends State<AddScreen> {
         }
       } else {
         consumeDays = item['consume_days'] ?? 7;
+      }
+
+      if (item['storage_type'] != null && item['storage_type'] != '냉장') {
+        consumeDays = await ApiService.calculateConsumeDays(
+          name: item['name'],
+          storageType: item['storage_type'],
+        );
       }
 
       final success = await ApiService.addIngredient(
