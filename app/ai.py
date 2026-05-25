@@ -358,9 +358,8 @@ def estimate_price(items: list) -> dict:
     
     response_text = ""
     for block in message.content:
-        if hasattr(block, "text"):
-            response_text = block.text
-            break
+        if hasattr(block, "text") and block.text:
+            response_text += block.text
     
     json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
     if json_match:
@@ -392,10 +391,13 @@ def get_consume_days_by_storage(ingredient_name: str, storage_type: str) -> int:
     )
     
     try:
+        response_text = ""
         for block in message.content:
-            if block.type == "text":
-                days = int(block.text.strip())
-                return days
+            if hasattr(block, "text") and block.text:
+                response_text += block.text
+        days = int(response_text.strip())
+        return days
+
     except:
         pass
     
