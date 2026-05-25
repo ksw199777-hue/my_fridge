@@ -440,3 +440,21 @@ class ApiService {
     }
     return 7;
   }
+
+  // 냉장고 멤버 조회
+  static Future<Map<String, dynamic>> getFridgeMembers(int fridgeId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/fridges/$fridgeId/members'),
+      headers: _headers,
+    );
+    return jsonDecode(utf8.decode(response.bodyBytes));
+  }
+
+  // 멤버 내보내기
+  static Future<bool> removeFridgeMember(int fridgeId, int userId) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/fridges/$fridgeId/members/$userId'),
+      headers: _headers,
+    );
+    return response.statusCode == 200;
+  }
