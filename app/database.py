@@ -25,9 +25,12 @@ class User(Base):
     username = Column(String, index=True)
     password_hash = Column(String)
     created_date = Column(Date, default=date.today)
-    fcm_token = Column(String, nullable=True)  # 추가
+    fcm_token = Column(String, nullable=True)
+    subscription_type = Column(String, default="free")  # free/premium/team/vip
+    subscription_expires = Column(Date, nullable=True)   # 구독 만료일
+    trial_used = Column(Integer, default=0)              # 무료체험 사용 여부
+    extra_members = Column(Integer, default=0)           # 팀플랜 추가 인원 수
     fridges = relationship("Fridge", back_populates="owner")
-    subscription_type = Column(String, default="free")
 
 class Fridge(Base):
     __tablename__ = "fridges"
