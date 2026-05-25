@@ -107,7 +107,7 @@ class ApiService {
     }
     return false;
   }
-  
+
   // 냉장고 목록
   static Future<List<dynamic>> getFridges() async {
     final response = await http.get(
@@ -159,6 +159,7 @@ class ApiService {
     int consumeDays = 7,
     int price = 0,
     String location = '냉장',
+    String storageType = '냉장',
     bool hasExpiryLabel = false,
   }) async {
     if (_currentFridgeId == null) return false;
