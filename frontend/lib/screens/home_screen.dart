@@ -438,11 +438,11 @@ class _HomeScreenState extends State<HomeScreen> {
               )
             : const Row(
                 children: [
-                  Text('🧊', style: TextStyle(fontSize: 24)),
-                  SizedBox(width: 8),
+                  Text('🧊', style: TextStyle(fontSize: 20)),
+                  SizedBox(width: 4),
                   Text(
                     '나만의 냉장고',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ],
               ),
