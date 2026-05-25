@@ -251,7 +251,7 @@ Future<void> _estimatePrice() async {
                                         )
                                       : const Icon(Icons.calculate),
                                   label: Text(_isEstimating
-                                      ? 'AI가 계산중...'
+                                      ? '🔍 최신 마트 시세 검색 중... (잠시만요!)'
                                       : '💰 총 장보기 예상 금액 계산'),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF7BC67E),

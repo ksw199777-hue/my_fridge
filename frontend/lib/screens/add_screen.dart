@@ -78,17 +78,23 @@ class _AddScreenState extends State<AddScreen> {
     }
 
     // 보관방법 선택창
+    List<Map<String, dynamic>>? updatedIngredients;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => _StorageTypeDialog(
         ingredients: _pendingIngredients,
         onConfirm: (updated) {
-          setState(() => _pendingIngredients = updated);
+          updatedIngredients = updated;
         },
       ),
     );
 
     if (confirmed != true) return;
+
+    // 다이얼로그 닫힌 후에 업데이트
+    if (updatedIngredients != null) {
+      _pendingIngredients = updatedIngredients!;
+    }
 
     setState(() => _isLoading = true);
 
