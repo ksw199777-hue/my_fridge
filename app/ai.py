@@ -354,3 +354,29 @@ def estimate_price(items: list) -> dict:
     if json_match:
         return json.loads(json_match.group())
     return {"items": [], "total": 0}
+
+def get_consume_days_by_storage(ingredient_name: str, storage_type: str) -> int:
+    message = client.messages.create(
+        model="claude-opus-4-5",
+        max_tokens=256,
+        messages=[
+            {
+                "role": "user",
+                "content": f"""식품위생법과 식품의약품안전처 기준을 참고해서 답해주세요.
+재료: {ingredient_name}
+보관방법: {storage_type}
+
+이 재료를 {storage_type} 보관할 때 오늘부터 안전하게 소비 가능한 일수를 숫자만 답해주세요.
+예시: 7
+숫자 외에 다른 말은 하지 마세요."""
+            }
+        ],
+    )
+    
+    try:
+        days = int(message.content[0].text.strip())
+        return days
+    except:
+        # 기본값 (보관방법별)
+        defaults = {"냉장": 7, "냉동": 90, "실온": 3}
+        return defaults.get(storage_type, 7)

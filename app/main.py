@@ -308,6 +308,7 @@ def get_ingredients(
             "has_expiry_label": i.has_expiry_label,
             "price": i.price,
             "location": i.location,
+            "storage_type": i.storage_type,
             "fridge_id": i.fridge_id,
             "d_day": (i.consume_date - date.today()).days
         }
@@ -387,6 +388,7 @@ class IngredientCreate(BaseModel):
     price: int = 0
     location: str = "냉장"
     has_expiry_label: bool = False
+    storage_type: str = "냉장"
 
 @app.post("/ingredients")
 def create_ingredient(item: IngredientCreate, fridge_id: int, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
@@ -396,6 +398,7 @@ def create_ingredient(item: IngredientCreate, fridge_id: int, current_user: User
         expiry_date=date.today() + timedelta(days=item.expiry_days) if item.expiry_days else None,
         consume_date=date.today() + timedelta(days=item.consume_days),
         has_expiry_label=1 if item.has_expiry_label else 0,
+        storage_type=item.storage_type,
         price=item.price,
         location=item.location,
         fridge_id=fridge_id
@@ -422,6 +425,7 @@ class IngredientUpdate(BaseModel):
     price: int = None
     location: str = None
     has_expiry_label: bool = None
+    storage_type: str = None
 
 @app.put("/ingredients/{ingredient_id}")
 def update_ingredient(ingredient_id: int, item: IngredientUpdate, db: Session = Depends(get_db)):
@@ -440,6 +444,12 @@ def update_ingredient(ingredient_id: int, item: IngredientUpdate, db: Session = 
         ingredient.location = item.location
     if item.has_expiry_label is not None:
         ingredient.has_expiry_label = 1 if item.has_expiry_label else 0
+    if item.storage_type is not None:
+        ingredient.storage_type = item.storage_type
+        # 보관방법 바뀌면 소비기한 자동 재계산
+        from app.ai import get_consume_days_by_storage
+        new_days = get_consume_days_by_storage(ingredient.name, item.storage_type)
+        ingredient.consume_date = date.today() + timedelta(days=new_days)
     db.commit()
     db.refresh(ingredient)
     return {

@@ -63,6 +63,7 @@ class Ingredient(Base):
     has_expiry_label = Column(Integer, default=0)
     price = Column(Integer, default=0)
     location = Column(String, default="냉장")
+    storage_type = Column(String, default="냉장")
     fridge_id = Column(Integer, ForeignKey("fridges.id"), nullable=True)
     fridge = relationship("Fridge", back_populates="ingredients")
 
