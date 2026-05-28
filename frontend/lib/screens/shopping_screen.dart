@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../api_service.dart';
 
 class ShoppingScreen extends StatefulWidget {
@@ -11,10 +12,9 @@ class ShoppingScreen extends StatefulWidget {
 class _ShoppingScreenState extends State<ShoppingScreen> {
   List<dynamic> _items = [];
   bool _isLoading = true;
-  bool _isEstimating = false;
-  Map<String, dynamic> _estimate = {};
   final _nameController = TextEditingController();
   final _quantityController = TextEditingController();
+  final _memoController = TextEditingController();
 
   @override
   void initState() {
@@ -28,7 +28,6 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     setState(() {
       _items = items;
       _isLoading = false;
-      _estimate = {};
     });
   }
 
@@ -41,41 +40,6 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     _nameController.clear();
     _quantityController.clear();
     _loadItems();
-  }
-
-Future<void> _estimatePrice() async {
-    setState(() => _isEstimating = true);
-    final result = await ApiService.estimateShoppingPrice();
-    if (result['error'] == 'premium') {
-      setState(() => _isEstimating = false);
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('⭐ 프리미엄 기능'),
-          content: const Text('쇼핑 예상 가격 계산은 프리미엄 구독자만 사용할 수 있어요!\n\n월 3,000원으로 업그레이드해보세요 😄'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('닫기'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4A90D9),
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('업그레이드'),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-    setState(() {
-      _estimate = result;
-      _isEstimating = false;
-    });
   }
 
   Future<void> _deleteAll() async {
@@ -102,6 +66,15 @@ Future<void> _estimatePrice() async {
         await ApiService.deleteShoppingItem(item['id']);
       }
       _loadItems();
+    }
+  }
+
+  void _openCoupang(String itemName) async {
+    final encodedName = Uri.encodeComponent(itemName);
+    final url = Uri.parse(
+        'https://www.coupang.com/np/search?q=$encodedName&channel=myfridge');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
     }
   }
 
@@ -152,8 +125,8 @@ Future<void> _estimatePrice() async {
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.shopping_basket,
                               color: Color(0xFF4A90D9)),
-                          contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
+                          contentPadding:
+                              EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
                       ),
                     ),
@@ -164,8 +137,8 @@ Future<void> _estimatePrice() async {
                         decoration: const InputDecoration(
                           labelText: '수량/무게',
                           border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
+                          contentPadding:
+                              EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
                       ),
                     ),
@@ -184,31 +157,6 @@ Future<void> _estimatePrice() async {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0F7FF),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '💡 재료 이름은 구체적으로, 수량은 단위를 붙여주세요!',
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF4A90D9),
-                            fontWeight: FontWeight.bold),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        '예) 삼겹살 / 600g,  대파 / 1단,  계란 / 30개묶음,  양파 / 1망',
-                        style: TextStyle(fontSize: 11, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                ),
               ],
             ),
           ),
@@ -224,127 +172,52 @@ Future<void> _estimatePrice() async {
                             Text('🛒', style: TextStyle(fontSize: 80)),
                             SizedBox(height: 16),
                             Text('장보기 목록이 비어있어요!',
-                                style: TextStyle(
-                                    fontSize: 18, color: Colors.grey)),
+                                style:
+                                    TextStyle(fontSize: 18, color: Colors.grey)),
                           ],
                         ),
                       )
                     : SingleChildScrollView(
                         child: Column(
                           children: [
-                            // 예상 가격 버튼
+                            // 쿠팡 안내
                             Padding(
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 16),
-                              child: SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton.icon(
-                                  onPressed:
-                                      _isEstimating ? null : _estimatePrice,
-                                  icon: _isEstimating
-                                      ? const SizedBox(
-                                          width: 16,
-                                          height: 16,
-                                          child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white),
-                                        )
-                                      : const Icon(Icons.calculate),
-                                  label: Text(_isEstimating
-                                      ? '🔍 최신 마트 시세 검색 중... (잠시만요!)'
-                                      : '💰 총 장보기 예상 금액 계산'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF7BC67E),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 12),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(12)),
-                                  ),
+                              child: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFF8E1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                      color: const Color(0xFFFFCC02)
+                                          .withOpacity(0.5)),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Text('🛍️',
+                                        style: TextStyle(fontSize: 16)),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        '재료 옆 쿠팡 버튼을 누르면 쿠팡에서 바로 구매할 수 있어요!',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: Color(0xFF856404)),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-
-                            // 예상 가격 결과
-                            if (_estimate.isNotEmpty &&
-                                _estimate['items'] != null) ...[
-                              const SizedBox(height: 12),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16),
-                                child: Card(
-                                  color: const Color(0xFFF0FFF4),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(16),
-                                      side: const BorderSide(
-                                          color: Color(0xFF7BC67E))),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text('💰 예상 장보기 비용',
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16)),
-                                        const SizedBox(height: 12),
-                                        ...(_estimate['items']
-                                                as List<dynamic>)
-                                            .map((item) => Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                          bottom: 6),
-                                                  child: Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .spaceBetween,
-                                                    children: [
-                                                      Text(
-                                                          '${item['name']} ${item['quantity']}'),
-                                                      Text(
-                                                          '약 ${item['total_price']}원',
-                                                          style: const TextStyle(
-                                                              color: Color(
-                                                                  0xFF4A90D9))),
-                                                    ],
-                                                  ),
-                                                )),
-                                        const Divider(),
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            const Text('총 예상 금액',
-                                                style: TextStyle(
-                                                    fontWeight:
-                                                        FontWeight.bold)),
-                                            Text(
-                                              '약 ${_estimate['total']}원',
-                                              style: const TextStyle(
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Color(0xFF7BC67E)),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 8),
 
                             // 쇼핑 목록
                             ListView.builder(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
                               itemCount: _items.length,
                               itemBuilder: (context, index) {
                                 final item = _items[index];
@@ -369,19 +242,80 @@ Future<void> _estimatePrice() async {
                                         style: const TextStyle(
                                             fontWeight: FontWeight.bold)),
                                     subtitle: Text('${item['quantity']}'),
-                                    trailing: IconButton(
-                                      icon: const Icon(Icons.delete_outline,
-                                          color: Colors.red),
-                                      onPressed: () async {
-                                        await ApiService.deleteShoppingItem(
-                                            item['id']);
-                                        _loadItems();
-                                      },
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        // 쿠팡 버튼
+                                        GestureDetector(
+                                          onTap: () =>
+                                              _openCoupang(item['name']),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFFFCC02),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: const Text(
+                                              '쿠팡',
+                                              style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Color(0xFF1A1A1A)),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        IconButton(
+                                          icon: const Icon(
+                                              Icons.delete_outline,
+                                              color: Colors.red),
+                                          onPressed: () async {
+                                            await ApiService
+                                                .deleteShoppingItem(
+                                                    item['id']);
+                                            _loadItems();
+                                          },
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 );
                               },
                             ),
+
+                            // 메모 섹션
+                            const SizedBox(height: 16),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('📝 메모',
+                                      style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 8),
+                                  TextField(
+                                    controller: _memoController,
+                                    maxLines: 4,
+                                    decoration: InputDecoration(
+                                      hintText:
+                                          '장보기 메모를 자유롭게 적어보세요!\n예) 마트 가는 날: 토요일, 예산: 5만원',
+                                      border: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12),
+                                      ),
+                                      filled: true,
+                                      fillColor: Colors.grey.shade50,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 24),
                           ],
                         ),
                       ),
