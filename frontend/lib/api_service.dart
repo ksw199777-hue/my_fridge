@@ -487,29 +487,29 @@ static Future<bool> setBudget(int year, int month, int budget, String memo) asyn
 }
 
 // 비밀번호 찾기
-static Future<Map<String, dynamic>> forgotPassword(String email) async {
-  final response = await http.post(
-    Uri.parse('$baseUrl/auth/forgot-password?email=$email'),
-    headers: {'Content-Type': 'application/json'},
-  );
-  return jsonDecode(utf8.decode(response.bodyBytes));
-}
+  static Future<Map<String, dynamic>> forgotPassword(String email) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/forgot-password?email=$email'),
+      headers: {'Content-Type': 'application/json'},
+    );
+    return jsonDecode(utf8.decode(response.bodyBytes));
+  }
 
-// 비밀번호 재설정
-static Future<Map<String, dynamic>> resetPassword({
-  required String email,
-  required String tempPassword,
-  required String newPassword,
-}) async {
-  final response = await http.post(
-    Uri.parse('$baseUrl/auth/reset-password'),
-    headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({
-      'email': email,
-      'temp_password': tempPassword,
-      'new_password': newPassword,
-    }),
-  );
-  return jsonDecode(utf8.decode(response.bodyBytes));
-}
+  // 비밀번호 재설정
+  static Future<Map<String, dynamic>> resetPassword({
+    required String email,
+    required String tempPassword,
+    required String newPassword,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/reset-password'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email,
+        'temp_password': tempPassword,
+        'new_password': newPassword,
+      }),
+    );
+    return jsonDecode(utf8.decode(response.bodyBytes));
+  }
 }
