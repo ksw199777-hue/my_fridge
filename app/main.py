@@ -20,6 +20,8 @@ import random
 import string
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 load_dotenv()
 
@@ -919,24 +921,15 @@ def forgot_password(email: str, db: Session = Depends(get_db)):
         temp_password = ''.join(random.choices(string.digits, k=6))
         reset_tokens[email] = temp_password
         
-        gmail_user = os.getenv("GMAIL_USER")
-        gmail_password = os.getenv("GMAIL_PASSWORD")
-        
-        print(f"Gmail 설정: {gmail_user}")
-        
-        msg = MIMEMultipart()
-        msg['From'] = gmail_user
-        msg['To'] = email
-        msg['Subject'] = '[나만의 냉장고] 임시 비밀번호 안내'
-        
-        body = f"임시 비밀번호: {temp_password}\n\n앱에서 임시 비밀번호로 로그인 후 비밀번호를 변경해주세요."
-        msg.attach(MIMEText(body, 'plain'))
-        
-        server = smtplib.SMTP('smtp.gmail.com', 465)
-        server.login(gmail_user, gmail_password)
-        server.sendmail(gmail_user, email, msg.as_string())
-        server.quit()
-        
+        sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
+        message = Mail(
+            from_email=os.getenv("SENDGRID_FROM_EMAIL"),
+            to_emails=email,
+            subject='[나만의 냉장고] 임시 비밀번호 안내',
+            plain_text_content=f'임시 비밀번호: {temp_password}\n\n앱에서 임시 비밀번호로 로그인 후 비밀번호를 변경해주세요.'
+        )
+        sg.send(message)
+        print("이메일 발송 성공")
         return {"message": "임시 비밀번호를 이메일로 발송했어요!"}
     except Exception as e:
         print(f"에러 발생: {e}")
