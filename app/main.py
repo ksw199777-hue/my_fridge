@@ -911,33 +911,25 @@ reset_tokens = {}
 
 @app.post("/auth/forgot-password")
 def forgot_password(email: str, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == email).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="등록되지 않은 이메일이에요")
-    
-    # 임시 비밀번호 생성 (6자리 숫자)
-    temp_password = ''.join(random.choices(string.digits, k=6))
-    reset_tokens[email] = temp_password
-    
-    # 이메일 발송
     try:
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="등록되지 않은 이메일이에요")
+        
+        temp_password = ''.join(random.choices(string.digits, k=6))
+        reset_tokens[email] = temp_password
+        
         gmail_user = os.getenv("GMAIL_USER")
         gmail_password = os.getenv("GMAIL_PASSWORD")
+        
+        print(f"Gmail 설정: {gmail_user}")
         
         msg = MIMEMultipart()
         msg['From'] = gmail_user
         msg['To'] = email
         msg['Subject'] = '[나만의 냉장고] 임시 비밀번호 안내'
         
-        body = f"""
-안녕하세요! 나만의 냉장고입니다.
-
-임시 비밀번호: {temp_password}
-
-앱에서 임시 비밀번호로 로그인 후 비밀번호를 변경해주세요.
-
-감사합니다.
-        """
+        body = f"임시 비밀번호: {temp_password}\n\n앱에서 임시 비밀번호로 로그인 후 비밀번호를 변경해주세요."
         msg.attach(MIMEText(body, 'plain'))
         
         server = smtplib.SMTP('smtp.gmail.com', 587)
@@ -945,11 +937,11 @@ def forgot_password(email: str, db: Session = Depends(get_db)):
         server.login(gmail_user, gmail_password)
         server.sendmail(gmail_user, email, msg.as_string())
         server.quit()
+        
+        return {"message": "임시 비밀번호를 이메일로 발송했어요!"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail="이메일 발송에 실패했어요")
-    
-    return {"message": "임시 비밀번호를 이메일로 발송했어요!"}
-
+        print(f"에러 발생: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 class ResetPasswordRequest(BaseModel):
     email: str
     temp_password: str
