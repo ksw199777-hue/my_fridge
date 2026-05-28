@@ -60,9 +60,9 @@ Widget build(BuildContext context) {
               Image.asset('assets/fridge_icon.png', width: 140, height: 140),
               const SizedBox(height: 4),
               Text(
-                '나만의 냉장고',
+                '시워냉',
                 style: GoogleFonts.jua(
-                  fontSize: 65,
+                  fontSize: 72,
                   color: const Color(0xFF4A90D9),
                   letterSpacing: -1,
                 ),
