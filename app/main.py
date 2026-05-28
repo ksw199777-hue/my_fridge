@@ -22,6 +22,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
+from app.auth import hash_password
 
 load_dotenv()
 
@@ -948,8 +949,7 @@ def reset_password(data: ResetPasswordRequest, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없어요")
     
-    import bcrypt
-    user.password_hash = bcrypt.hashpw(data.new_password.encode(), bcrypt.gensalt()).decode()
+    user.password_hash = hash_password(data.new_password)
     db.commit()
     
     del reset_tokens[data.email]
