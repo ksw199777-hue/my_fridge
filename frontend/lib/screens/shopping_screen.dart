@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ShoppingScreen extends StatefulWidget {
   const ShoppingScreen({super.key});
@@ -16,10 +17,28 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
   final _quantityController = TextEditingController();
   final _memoController = TextEditingController();
 
+  Future<void> _loadMemo() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _memoController.text = prefs.getString('shopping_memo') ?? '';
+    });
+  }
+
+  Future<void> _saveMemo() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('shopping_memo', _memoController.text);
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('메모가 저장됐어요! 📝')));
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _loadItems();
+    _loadMemo();
   }
 
   Future<void> _loadItems() async {
@@ -222,13 +241,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
-                                  onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('메모가 저장됐어요! 📝'),
-                                      ),
-                                    );
-                                  },
+                                  onPressed: _saveMemo,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF4A90D9),
                                     foregroundColor: Colors.white,
@@ -390,13 +403,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
-                                  onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('메모가 저장됐어요! 📝'),
-                                      ),
-                                    );
-                                  },
+                                  onPressed: _saveMemo,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF4A90D9),
                                     foregroundColor: Colors.white,
