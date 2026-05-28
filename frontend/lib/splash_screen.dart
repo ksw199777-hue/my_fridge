@@ -46,80 +46,40 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          // 배경 식재료들
-          Positioned(top: 60, left: 30, child: _FoodEmoji('🥕', 40)),
-          Positioned(top: 120, right: 20, child: _FoodEmoji('🥦', 44)),
-          Positioned(top: 240, right: 30, child: _FoodEmoji('🍅', 38)),
-          Positioned(top: 200, left: 20, child: _FoodEmoji('🥚', 36)),
-          Positioned(top: 360, right: 20, child: _FoodEmoji('🧅', 40)),
-          Positioned(top: 400, left: 30, child: _FoodEmoji('🍋', 38)),
-          Positioned(top: 500, right: 30, child: _FoodEmoji('🌶️', 36)),
-          Positioned(top: 520, left: 20, child: _FoodEmoji('🍄', 40)),
-          Positioned(top: 640, right: 20, child: _FoodEmoji('🥑', 42)),
-          Positioned(top: 660, left: 30, child: _FoodEmoji('🧄', 38)),
-          Positioned(top: 760, right: 30, child: _FoodEmoji('🫐', 40)),
-          Positioned(top: 780, left: 20, child: _FoodEmoji('🍓', 38)),
-
-          // 중앙 로고
-          Center(
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: ScaleTransition(
-                scale: _scaleAnimation,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      '나만의',
-                      style: GoogleFonts.blackHanSans(
-                        fontSize: 48,
-                        color: const Color(0xFF2D3436),
-                        letterSpacing: -1,
-                      ),
-                    ),
-                    Text(
-                      '냉장고',
-                      style: GoogleFonts.blackHanSans(
-                        fontSize: 48,
-                        color: const Color(0xFF4A90D9),
-                        letterSpacing: -1,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'AI가 관리하는 스마트 냉장고',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade500,
-                      ),
-                    ),
-                  ],
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: Colors.white,
+    body: Center(
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: ScaleTransition(
+          scale: _scaleAnimation,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset('assets/fridge_icon.png', width: 140, height: 140),
+              const SizedBox(height: 4),
+              Text(
+                '나만의 냉장고',
+                style: GoogleFonts.jua(
+                  fontSize: 72,
+                  color: const Color(0xFF4A90D9),
+                  letterSpacing: -1,
                 ),
               ),
-            ),
+              const SizedBox(height: 8),
+              Text(
+                'AI가 관리하는 스마트 냉장고',
+                style: GoogleFonts.jua(
+                  fontSize: 16,
+                  color: Colors.grey.shade500,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
-    );
-  }
+    ),
+  );
 }
-
-class _FoodEmoji extends StatelessWidget {
-  final String emoji;
-  final double size;
-
-  const _FoodEmoji(this.emoji, this.size);
-
-  @override
-  Widget build(BuildContext context) {
-    return Opacity(
-      opacity: 0.15,
-      child: Text(emoji, style: TextStyle(fontSize: size)),
-    );
-  }
 }

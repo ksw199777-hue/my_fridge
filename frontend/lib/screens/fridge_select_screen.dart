@@ -3,6 +3,7 @@ import '../api_service.dart';
 import '../main.dart';
 import 'package:flutter/services.dart';
 import 'fridge_detail_screen.dart';
+import 'package:iconsax/iconsax.dart';
 
 class FridgeSelectScreen extends StatefulWidget {
   const FridgeSelectScreen({super.key});
@@ -58,7 +59,8 @@ class _FridgeSelectScreenState extends State<FridgeSelectScreen> {
   }
 
   Future<void> _selectFridge(int fridgeId) async {
-    await ApiService.saveFridgeId(fridgeId);
+    final fridge = _fridges.firstWhere((f) => f['id'] == fridgeId);
+    await ApiService.saveFridgeId(fridgeId, fridgeName: fridge['name']);
     if (mounted) {
       Navigator.pushReplacement(
         context,
@@ -98,9 +100,18 @@ class _FridgeSelectScreenState extends State<FridgeSelectScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 내 냉장고 목록
-                  const Text(
-                    '🧊 내 냉장고',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  const Row(
+                    children: [
+                      Icon(Iconsax.home_2, color: Color(0xFF4A90D9), size: 20),
+                      const SizedBox(width: 8),
+                      const Text(
+                        '내 냉장고',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   if (_fridges.isEmpty)
@@ -118,21 +129,11 @@ class _FridgeSelectScreenState extends State<FridgeSelectScreen> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: ListTile(
-                          onTap: () {
-                            // ← 추가
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => FridgeDetailScreen(
-                                  fridgeId: fridge['id'],
-                                  fridgeName: fridge['name'],
-                                ),
-                              ),
-                            );
-                          },
-                          leading: const Text(
-                            '🧊',
-                            style: TextStyle(fontSize: 28),
+                          onTap: () => _selectFridge(fridge['id']),
+                          leading: Icon(
+                            Icons.kitchen,
+                            color: Color(0xFF4A90D9),
+                            size: 28,
                           ),
                           title: Text(
                             fridge['name'],
@@ -254,9 +255,22 @@ class _FridgeSelectScreenState extends State<FridgeSelectScreen> {
                   const SizedBox(height: 16),
 
                   // 새 냉장고 만들기
-                  const Text(
-                    '➕ 새 냉장고 만들기',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  Row(
+                    children: [
+                      const Icon(
+                        Iconsax.add_circle,
+                        color: Color(0xFF4A90D9),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        '새 냉장고 만들기',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -296,9 +310,22 @@ class _FridgeSelectScreenState extends State<FridgeSelectScreen> {
                   const SizedBox(height: 24),
 
                   // 초대 코드로 참여
-                  const Text(
-                    '🔗 초대 코드로 참여',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  Row(
+                    children: [
+                      const Icon(
+                        Iconsax.link,
+                        color: Color(0xFF4A90D9),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        '초대 코드로 참여',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   Row(

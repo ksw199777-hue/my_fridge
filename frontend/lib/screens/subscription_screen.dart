@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../api_service.dart';
+import 'package:iconsax/iconsax.dart';
 
 class SubscriptionScreen extends StatefulWidget {
   const SubscriptionScreen({super.key});
@@ -38,22 +39,22 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
     if (success && mounted) {
       await _loadUserInfo();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('$planType 플랜으로 변경됐어요! 🎉')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$planType 플랜으로 변경됐어요! 🎉')),
+      );
     }
   }
 
   String _getPlanName(String type) {
     switch (type) {
       case 'premium':
-        return '⭐ 프리미엄';
+        return '프리미엄';
       case 'team':
-        return '👨‍👩‍👧‍👦 팀';
+        return '팀';
       case 'vip':
-        return '👑 VIP';
+        return 'VIP';
       default:
-        return '🆓 무료';
+        return '무료';
     }
   }
 
@@ -82,7 +83,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 현재 플랜
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
@@ -129,12 +129,19 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                               color: Colors.green,
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: const Text(
-                              '🎁 첫 결제 시 1개월 무료!',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Icon(Iconsax.gift, color: Colors.white, size: 14),
+                                SizedBox(width: 4),
+                                Text(
+                                  '첫 결제 시 1개월 무료!',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -143,9 +150,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // 플랜 카드들
                   _PlanCard(
-                    title: '🆓 무료',
+                    icon: Iconsax.slash,
+                    title: '무료',
                     price: '무료',
                     features: const [
                       '재료 인식 / 수동 등록',
@@ -157,14 +164,13 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     ],
                     isCurrentPlan: currentPlan == 'free',
                     color: Colors.grey,
-                    onTap: currentPlan != 'free'
-                        ? () => _subscribe('free')
-                        : null,
+                    onTap: currentPlan != 'free' ? () => _subscribe('free') : null,
                   ),
                   const SizedBox(height: 12),
 
                   _PlanCard(
-                    title: '⭐ 프리미엄',
+                    icon: Iconsax.star,
+                    title: '프리미엄',
                     price: '월 3,000원',
                     features: const [
                       'AI 레시피 추천',
@@ -177,13 +183,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     isCurrentPlan: currentPlan == 'premium',
                     color: const Color(0xFF4A90D9),
                     badge: trialUsed == 0 ? '1개월 무료' : null,
-                    onTap: currentPlan != 'premium'
-                        ? () => _subscribe('premium')
-                        : null,
+                    onTap: currentPlan != 'premium' ? () => _subscribe('premium') : null,
                   ),
                   const SizedBox(height: 12),
 
-                  // 팀 플랜 (추가 인원 선택 포함)
                   Card(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -202,12 +205,18 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
-                                '👨‍👩‍👧‍👦 팀 플랜',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              Row(
+                                children: const [
+                                  Icon(Iconsax.people, color: Color(0xFF7BC67E), size: 22),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    '팀 플랜',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
                               ),
                               Row(
                                 children: [
@@ -249,12 +258,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                           const Text('• 구독자만 AI 사용 가능'),
                           const SizedBox(height: 12),
                           Row(
-                            children: [
-                              const Text(
-                                '추가 인원: ',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              const Text('(1명당 +1,000원, 최대 2명 추가)'),
+                            children: const [
+                              Text('추가 인원: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                              Text('(1명당 +1,000원, 최대 2명 추가)'),
                             ],
                           ),
                           const SizedBox(height: 8),
@@ -300,9 +306,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
-                                child: Text(
-                                  trialUsed == 0 ? '1개월 무료로 시작하기' : '구독하기',
-                                ),
+                                child: Text(trialUsed == 0 ? '1개월 무료로 시작하기' : '구독하기'),
                               ),
                             )
                           else
@@ -330,7 +334,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   const SizedBox(height: 12),
 
                   _PlanCard(
-                    title: '👑 VIP',
+                    icon: Iconsax.crown,
+                    title: 'VIP',
                     price: '월 15,000원',
                     features: const [
                       '모든 기능 사용 가능',
@@ -341,39 +346,29 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     isCurrentPlan: currentPlan == 'vip',
                     color: const Color(0xFFFFB347),
                     badge: trialUsed == 0 ? '1개월 무료' : null,
-                    onTap: currentPlan != 'vip'
-                        ? () => _subscribe('vip')
-                        : null,
+                    onTap: currentPlan != 'vip' ? () => _subscribe('vip') : null,
                   ),
                   const SizedBox(height: 24),
 
-                  // 안내 문구
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: Colors.grey.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Column(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '📌 안내',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                        Row(
+                          children: const [
+                            Icon(Iconsax.info_circle, color: Color(0xFF4A90D9), size: 18),
+                            SizedBox(width: 6),
+                            Text('안내', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ],
                         ),
-                        SizedBox(height: 8),
-                        Text(
-                          '• 첫 결제 시 1개월 무료 체험 제공',
-                          style: TextStyle(fontSize: 13),
-                        ),
-                        Text(
-                          '• 구독은 언제든지 변경/해지 가능',
-                          style: TextStyle(fontSize: 13),
-                        ),
-                        Text(
-                          '• 실제 결제는 추후 인앱결제로 연동 예정',
-                          style: TextStyle(fontSize: 13, color: Colors.grey),
-                        ),
+                        const SizedBox(height: 8),
+                        const Text('• 첫 결제 시 1개월 무료 체험 제공', style: TextStyle(fontSize: 13)),
+                        const Text('• 구독은 언제든지 변경/해지 가능', style: TextStyle(fontSize: 13)),
                       ],
                     ),
                   ),
@@ -385,6 +380,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 }
 
 class _PlanCard extends StatelessWidget {
+  final IconData icon;
   final String title;
   final String price;
   final List<String> features;
@@ -394,6 +390,7 @@ class _PlanCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   const _PlanCard({
+    required this.icon,
     required this.title,
     required this.price,
     required this.features,
@@ -421,12 +418,18 @@ class _PlanCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  children: [
+                    Icon(icon, color: color, size: 22),
+                    const SizedBox(width: 8),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
                 Row(
                   children: [
@@ -462,9 +465,7 @@ class _PlanCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            ...features.map(
-              (f) => Text('• $f', style: const TextStyle(fontSize: 13)),
-            ),
+            ...features.map((f) => Text('• $f', style: const TextStyle(fontSize: 13))),
             const SizedBox(height: 12),
             if (!isCurrentPlan && onTap != null)
               SizedBox(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../api_service.dart';
 import 'fridge_select_screen.dart';
 import 'subscription_screen.dart';
+import 'package:iconsax/iconsax.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -33,6 +34,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return _avatarColors[hash % _avatarColors.length];
   }
 
+  String _fridgeName = '';
+
   @override
   void initState() {
     super.initState();
@@ -47,8 +50,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadIngredients() async {
     setState(() => _isLoading = true);
     final ingredients = await ApiService.getIngredients();
+    final fridgeName = await ApiService.getFridgeName();
     setState(() {
       _ingredients = ingredients;
+      _fridgeName = fridgeName;
       _isLoading = false;
     });
   }
@@ -138,62 +143,64 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-Future<void> _deleteSelected() async {
-  bool deleteHistory = false;
-  final confirm = await showDialog<bool>(
-    context: context,
-    builder: (context) => StatefulBuilder(
-      builder: (context, setDialogState) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('재료 삭제'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('선택한 ${_selectedIds.length}개 재료를 삭제할까요?'),
-            const SizedBox(height: 16),
-            RadioListTile<bool>(
-              title: const Text('식재료비 유지'),
-              subtitle: const Text('가계부 금액은 그대로 남아요'),
-              value: false,
-              groupValue: deleteHistory,
-              onChanged: (val) => setDialogState(() => deleteHistory = val!),
-              activeColor: const Color(0xFF4A90D9),
+  Future<void> _deleteSelected() async {
+    bool deleteHistory = false;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text('재료 삭제'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('선택한 ${_selectedIds.length}개 재료를 삭제할까요?'),
+              const SizedBox(height: 16),
+              RadioListTile<bool>(
+                title: const Text('식재료비 유지'),
+                subtitle: const Text('가계부 금액은 그대로 남아요'),
+                value: false,
+                groupValue: deleteHistory,
+                onChanged: (val) => setDialogState(() => deleteHistory = val!),
+                activeColor: const Color(0xFF4A90D9),
+              ),
+              RadioListTile<bool>(
+                title: const Text('식재료비도 함께 삭제'),
+                subtitle: const Text('가계부에서 금액도 제거돼요'),
+                value: true,
+                groupValue: deleteHistory,
+                onChanged: (val) => setDialogState(() => deleteHistory = val!),
+                activeColor: Colors.red,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('취소'),
             ),
-            RadioListTile<bool>(
-              title: const Text('식재료비도 함께 삭제'),
-              subtitle: const Text('가계부에서 금액도 제거돼요'),
-              value: true,
-              groupValue: deleteHistory,
-              onChanged: (val) => setDialogState(() => deleteHistory = val!),
-              activeColor: Colors.red,
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('삭제', style: TextStyle(color: Colors.red)),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('취소'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('삭제', style: TextStyle(color: Colors.red)),
-          ),
-        ],
       ),
-    ),
-  );
+    );
 
-  if (confirm == true) {
-    for (final id in _selectedIds) {
-      await ApiService.deleteIngredient(id, deleteHistory: deleteHistory);
+    if (confirm == true) {
+      for (final id in _selectedIds) {
+        await ApiService.deleteIngredient(id, deleteHistory: deleteHistory);
+      }
+      setState(() {
+        _isSelectionMode = false;
+        _selectedIds.clear();
+      });
+      _loadIngredients();
     }
-    setState(() {
-      _isSelectionMode = false;
-      _selectedIds.clear();
-    });
-    _loadIngredients();
   }
-}
 
   void _showIngredientDetail(dynamic item) {
     final dDay = item['d_day'] as int;
@@ -472,15 +479,12 @@ Future<void> _deleteSelected() async {
                   fontSize: 20,
                 ),
               )
-            : const Row(
-                children: [
-                  Text('🧊', style: TextStyle(fontSize: 20)),
-                  SizedBox(width: 4),
-                  Text(
-                    '나만의 냉장고',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                ],
+            : Text(
+                _fridgeName,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                ),
               ),
         backgroundColor: Colors.white,
         elevation: 0,
@@ -507,7 +511,7 @@ Future<void> _deleteSelected() async {
             IconButton(
               icon: const Icon(Icons.kitchen, color: Color(0xFF4A90D9)),
               onPressed: () {
-                Navigator.push(
+                Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
                     builder: (context) => const FridgeSelectScreen(),
@@ -556,21 +560,23 @@ Future<void> _deleteSelected() async {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       _SummaryItem(
-                        emoji: '🥗',
+                        icon: Iconsax.box,
                         count: _ingredients.length,
                         label: '전체',
                       ),
                       _SummaryItem(
-                        emoji: '⚠️',
+                        icon: Iconsax.warning_2,
                         count: _ingredients
                             .where((i) => i['d_day'] >= 0 && i['d_day'] <= 3)
                             .length,
                         label: '임박',
+                        iconColor: Colors.yellow,
                       ),
                       _SummaryItem(
-                        emoji: '❌',
+                        icon: Iconsax.close_circle,
                         count: _ingredients.where((i) => i['d_day'] < 0).length,
                         label: '만료',
+                        iconColor: Colors.redAccent,
                       ),
                     ],
                   ),
@@ -617,7 +623,11 @@ Future<void> _deleteSelected() async {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Text('🧊', style: TextStyle(fontSize: 60)),
+                              const Icon(
+                                Iconsax.alarm,
+                                color: Colors.grey,
+                                size: 60,
+                              ),
                               const SizedBox(height: 16),
                               Text(
                                 '$_selectedLocation 재료가 없어요!',
@@ -767,21 +777,23 @@ Future<void> _deleteSelected() async {
 }
 
 class _SummaryItem extends StatelessWidget {
-  final String emoji;
+  final IconData icon;
   final int count;
   final String label;
+  final Color iconColor;
 
   const _SummaryItem({
-    required this.emoji,
+    required this.icon,
     required this.count,
     required this.label,
+    this.iconColor = Colors.white,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(emoji, style: const TextStyle(fontSize: 24)),
+        Icon(icon, color: iconColor, size: 28),
         const SizedBox(height: 4),
         Text(
           '$count',

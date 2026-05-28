@@ -27,10 +27,18 @@ class ApiService {
     await prefs.setString('token', token);
   }
 
-  static Future<void> saveFridgeId(int fridgeId) async {
+  static Future<void> saveFridgeId(int fridgeId, {String? fridgeName}) async {
     _currentFridgeId = fridgeId;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('current_fridge_id', fridgeId);
+    if (fridgeName != null) {
+      await prefs.setString('current_fridge_name', fridgeName);
+    }
+  }
+
+  static Future<String> getFridgeName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('current_fridge_name') ?? '나만의 냉장고';
   }
 
   static Future<void> logout() async {
@@ -429,10 +437,7 @@ class ApiService {
     final response = await http.post(
       Uri.parse('$baseUrl/ingredients/calculate-consume-days'),
       headers: _headers,
-      body: jsonEncode({
-        'name': name,
-        'storage_type': storageType,
-      }),
+      body: jsonEncode({'name': name, 'storage_type': storageType}),
     );
     if (response.statusCode == 200) {
       final data = jsonDecode(utf8.decode(response.bodyBytes));
@@ -459,34 +464,39 @@ class ApiService {
     return response.statusCode == 200;
   }
 
-// 예산 조회
-static Future<Map<String, dynamic>> getBudget(int year, int month) async {
-  final response = await http.get(
-    Uri.parse('$baseUrl/budget?year=$year&month=$month'),
-    headers: _headers,
-  );
-  if (response.statusCode == 200) {
-    return jsonDecode(utf8.decode(response.bodyBytes));
+  // 예산 조회
+  static Future<Map<String, dynamic>> getBudget(int year, int month) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/budget?year=$year&month=$month'),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    }
+    return {'budget': 0, 'memo': ''};
   }
-  return {'budget': 0, 'memo': ''};
-}
 
-// 예산 저장
-static Future<bool> setBudget(int year, int month, int budget, String memo) async {
-  final response = await http.post(
-    Uri.parse('$baseUrl/budget'),
-    headers: _headers,
-    body: jsonEncode({
-      'year': year,
-      'month': month,
-      'budget': budget,
-      'memo': memo,
-    }),
-  );
-  return response.statusCode == 200;
-}
+  // 예산 저장
+  static Future<bool> setBudget(
+    int year,
+    int month,
+    int budget,
+    String memo,
+  ) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/budget'),
+      headers: _headers,
+      body: jsonEncode({
+        'year': year,
+        'month': month,
+        'budget': budget,
+        'memo': memo,
+      }),
+    );
+    return response.statusCode == 200;
+  }
 
-// 비밀번호 찾기
+  // 비밀번호 찾기
   static Future<Map<String, dynamic>> forgotPassword(String email) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/forgot-password?email=$email'),
