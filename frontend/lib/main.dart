@@ -100,7 +100,7 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.add_circle_outline), label: '추가'),
           BottomNavigationBarItem(icon: Icon(Icons.restaurant_menu), label: '레시피'),
           BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), label: '쇼핑'),
-          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: '통계'),
+          BottomNavigationBarItem(icon: Icon(Icons.menu_book), label: '가계부'),
         ],
       ),
     );
