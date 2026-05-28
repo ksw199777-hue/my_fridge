@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../api_service.dart';
+import 'package:iconsax/iconsax.dart';
 
 class StatisticsScreen extends StatefulWidget {
   const StatisticsScreen({super.key});
@@ -27,14 +28,19 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    final expenses = await ApiService.getMonthlyExpenses(_selectedYear, _selectedMonth);
+    final expenses = await ApiService.getMonthlyExpenses(
+      _selectedYear,
+      _selectedMonth,
+    );
     final history = await ApiService.getExpenseHistory();
     final budget = await ApiService.getBudget(_selectedYear, _selectedMonth);
     setState(() {
       _monthlyExpenses = expenses;
       _expenseHistory = history;
       _budget = budget;
-      _budgetController.text = budget['budget'].toString() == '0' ? '' : budget['budget'].toString();
+      _budgetController.text = budget['budget'].toString() == '0'
+          ? ''
+          : budget['budget'].toString();
       _memoController.text = budget['memo'] ?? '';
       _isLoading = false;
     });
@@ -53,8 +59,20 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   }
 
   String _getMonthName(int month) {
-    const months = ['1월', '2월', '3월', '4월', '5월', '6월',
-                    '7월', '8월', '9월', '10월', '11월', '12월'];
+    const months = [
+      '1월',
+      '2월',
+      '3월',
+      '4월',
+      '5월',
+      '6월',
+      '7월',
+      '8월',
+      '9월',
+      '10월',
+      '11월',
+      '12월',
+    ];
     return months[month - 1];
   }
 
@@ -71,10 +89,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       appBar: AppBar(
         title: const Row(
           children: [
-            Text('📒', style: TextStyle(fontSize: 24)),
+            const Icon(Iconsax.note_2, color: Color(0xFF4A90D9), size: 24),
             SizedBox(width: 8),
-            Text('식재료 가계부',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+            Text(
+              '식재료 가계부',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+            ),
           ],
         ),
         backgroundColor: Colors.white,
@@ -96,15 +116,34 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   // 월 선택
                   Row(
                     children: [
-                      const Text('📅 조회 월',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 16)),
+                      Row(
+                        children: [
+                          const Icon(
+                            Iconsax.calendar,
+                            color: Color(0xFF4A90D9),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            '조회 월',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
                       const Spacer(),
                       DropdownButton<int>(
                         value: _selectedYear,
-                        items: [2024, 2025, 2026].map((y) =>
-                            DropdownMenuItem(
-                                value: y, child: Text('$y년'))).toList(),
+                        items: [2024, 2025, 2026]
+                            .map(
+                              (y) => DropdownMenuItem(
+                                value: y,
+                                child: Text('$y년'),
+                              ),
+                            )
+                            .toList(),
                         onChanged: (val) {
                           setState(() => _selectedYear = val!);
                           _loadData();
@@ -113,10 +152,14 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       const SizedBox(width: 8),
                       DropdownButton<int>(
                         value: _selectedMonth,
-                        items: List.generate(12, (i) => i + 1).map((m) =>
-                            DropdownMenuItem(
+                        items: List.generate(12, (i) => i + 1)
+                            .map(
+                              (m) => DropdownMenuItem(
                                 value: m,
-                                child: Text(_getMonthName(m)))).toList(),
+                                child: Text(_getMonthName(m)),
+                              ),
+                            )
+                            .toList(),
                         onChanged: (val) {
                           setState(() => _selectedMonth = val!);
                           _loadData();
@@ -144,15 +187,18 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                         Text(
                           '${_selectedYear}년 ${_getMonthName(_selectedMonth)} 식재료비',
                           style: const TextStyle(
-                              color: Colors.white70, fontSize: 13),
+                            color: Colors.white70,
+                            fontSize: 13,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           '${thisMonthTotal.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}원',
                           style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold),
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         if (lastMonthDiff != 0)
@@ -161,7 +207,9 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                                 ? '지난달보다 ${lastMonthDiff.abs().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}원 더 썼어요 📈'
                                 : '지난달보다 ${lastMonthDiff.abs().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}원 절약했어요 📉',
                             style: const TextStyle(
-                                color: Colors.white70, fontSize: 13),
+                              color: Colors.white70,
+                              fontSize: 13,
+                            ),
                           ),
                       ],
                     ),
@@ -171,7 +219,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   // 예산 관리
                   Card(
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
@@ -180,13 +229,27 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('💰 이번달 예산',
-                                  style: TextStyle(
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Iconsax.wallet,
+                                    color: Color(0xFF4A90D9),
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    '이번달 예산',
+                                    style: TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 16)),
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ],
+                              ),
                               TextButton(
                                 onPressed: () => setState(
-                                    () => _isEditingBudget = !_isEditingBudget),
+                                  () => _isEditingBudget = !_isEditingBudget,
+                                ),
                                 child: Text(_isEditingBudget ? '취소' : '편집'),
                               ),
                             ],
@@ -207,7 +270,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                               maxLines: 3,
                               decoration: InputDecoration(
                                 labelText: '메모 (계획, 다이어리 등)',
-                                hintText: '이번달 장보기 계획을 자유롭게 적어보세요!\n예) 고기 위주로 구매, 과일 줄이기...',
+                                hintText:
+                                    '이번달 장보기 계획을 자유롭게 적어보세요!\n예) 고기 위주로 구매, 과일 줄이기...',
                                 border: const OutlineInputBorder(),
                                 filled: true,
                                 fillColor: Colors.grey.shade50,
@@ -236,7 +300,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                                   Text(
                                     '${budgetAmount.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}원',
                                     style: const TextStyle(
-                                        fontWeight: FontWeight.bold),
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -260,8 +325,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                               const SizedBox(height: 4),
                               LinearProgressIndicator(
                                 value: budgetAmount > 0
-                                    ? (thisMonthTotal / budgetAmount)
-                                        .clamp(0.0, 1.0)
+                                    ? (thisMonthTotal / budgetAmount).clamp(
+                                        0.0,
+                                        1.0,
+                                      )
                                     : 0,
                                 backgroundColor: Colors.grey.shade200,
                                 color: diff > 0
@@ -279,14 +346,19 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                                 ),
                               ),
                             ] else
-                              const Text('예산을 설정해보세요!',
-                                  style: TextStyle(color: Colors.grey)),
+                              const Text(
+                                '예산을 설정해보세요!',
+                                style: TextStyle(color: Colors.grey),
+                              ),
                             if (_memoController.text.isNotEmpty) ...[
                               const SizedBox(height: 12),
-                              const Text('📝 메모',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14)),
+                              const Text(
+                                '📝 메모',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
                               const SizedBox(height: 4),
                               Container(
                                 width: double.infinity,
@@ -295,8 +367,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                                   color: Colors.grey.shade50,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: Text(_memoController.text,
-                                    style: const TextStyle(fontSize: 13)),
+                                child: Text(
+                                  _memoController.text,
+                                  style: const TextStyle(fontSize: 13),
+                                ),
                               ),
                             ],
                           ],
@@ -307,14 +381,30 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   const SizedBox(height: 16),
 
                   // 월별 식재료비
-                  const Text('📊 월별 식재료비',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16)),
+                  Row(
+                    children: [
+                      const Icon(
+                        Iconsax.chart_2,
+                        color: Color(0xFF4A90D9),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        '월별 식재료비',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 12),
                   if (history.isEmpty)
                     const Center(
-                      child: Text('아직 구매 이력이 없어요',
-                          style: TextStyle(color: Colors.grey)),
+                      child: Text(
+                        '아직 구매 이력이 없어요',
+                        style: TextStyle(color: Colors.grey),
+                      ),
                     )
                   else
                     ListView.builder(
@@ -337,7 +427,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                                   '${item['month']}월',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: item['month'] == _selectedMonth &&
+                                    color:
+                                        item['month'] == _selectedMonth &&
                                             item['year'] == _selectedYear
                                         ? const Color(0xFF4A90D9)
                                         : Colors.black,
@@ -351,8 +442,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                                       height: 24,
                                       decoration: BoxDecoration(
                                         color: Colors.grey.shade100,
-                                        borderRadius:
-                                            BorderRadius.circular(4),
+                                        borderRadius: BorderRadius.circular(4),
                                       ),
                                     ),
                                     FractionallySizedBox(
@@ -362,14 +452,16 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                                       child: Container(
                                         height: 24,
                                         decoration: BoxDecoration(
-                                          color: item['month'] ==
-                                                      _selectedMonth &&
+                                          color:
+                                              item['month'] == _selectedMonth &&
                                                   item['year'] == _selectedYear
                                               ? const Color(0xFF4A90D9)
-                                              : const Color(0xFF4A90D9)
-                                                  .withOpacity(0.4),
-                                          borderRadius:
-                                              BorderRadius.circular(4),
+                                              : const Color(
+                                                  0xFF4A90D9,
+                                                ).withOpacity(0.4),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                         ),
                                       ),
                                     ),

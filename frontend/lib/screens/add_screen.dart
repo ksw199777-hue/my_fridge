@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../api_service.dart';
+import 'package:iconsax/iconsax.dart';
 
 class AddScreen extends StatefulWidget {
   const AddScreen({super.key});
@@ -165,9 +166,9 @@ class _AddScreenState extends State<AddScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Row(
+        title: Row(
           children: [
-            Text('➕', style: TextStyle(fontSize: 24)),
+            Icon(Iconsax.add_circle, color: Color(0xFF4A90D9), size: 24),
             SizedBox(width: 8),
             Text(
               '재료 추가',
@@ -185,9 +186,22 @@ class _AddScreenState extends State<AddScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    '📸 사진으로 추가',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  Row(
+                    children: [
+                      const Icon(
+                        Iconsax.camera,
+                        color: Color(0xFF4A90D9),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        '사진으로 추가',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -234,12 +248,22 @@ class _AddScreenState extends State<AddScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          '📋 저장 대기 중 (${_pendingIngredients.length}개)',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          children: [
+                            const Icon(
+                              Iconsax.task_square,
+                              color: Color(0xFF4A90D9),
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '저장 대기 중 (${_pendingIngredients.length}개)',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                         TextButton(
                           onPressed: () =>
@@ -367,9 +391,22 @@ class _AddScreenState extends State<AddScreen> {
                     const SizedBox(height: 24),
                   ],
 
-                  const Text(
-                    '✏️ 직접 입력',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  Row(
+                    children: [
+                      const Icon(
+                        Iconsax.edit,
+                        color: Color(0xFF4A90D9),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        '직접 입력',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   Card(

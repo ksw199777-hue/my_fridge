@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../api_service.dart';
+import 'package:iconsax/iconsax.dart';
 
 class FridgeDetailScreen extends StatefulWidget {
   final int fridgeId;
@@ -55,7 +56,9 @@ class _FridgeDetailScreenState extends State<FridgeDetailScreen> {
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red, foregroundColor: Colors.white),
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('내보내기'),
           ),
         ],
@@ -64,21 +67,23 @@ class _FridgeDetailScreenState extends State<FridgeDetailScreen> {
 
     if (confirmed != true) return;
 
-    final success =
-        await ApiService.removeFridgeMember(widget.fridgeId, userId);
+    final success = await ApiService.removeFridgeMember(
+      widget.fridgeId,
+      userId,
+    );
     if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$username 님을 내보냈어요!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$username 님을 내보냈어요!')));
       _loadData();
     }
   }
 
   void _copyInviteCode(String code) {
     Clipboard.setData(ClipboardData(text: code));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('초대 코드가 복사됐어요! 😄')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('초대 코드가 복사됐어요!')));
   }
 
   Future<void> _updateExtraMembers(int newExtra) async {
@@ -90,7 +95,11 @@ class _FridgeDetailScreenState extends State<FridgeDetailScreen> {
     if (success && mounted) {
       setState(() => _extraMembers = newExtra);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('추가 인원이 ${newExtra}명으로 변경됐어요! (월 ${5000 + newExtra * 1000}원)')),
+        SnackBar(
+          content: Text(
+            '추가 인원이 ${newExtra}명으로 변경됐어요! (월 ${5000 + newExtra * 1000}원)',
+          ),
+        ),
       );
     }
   }
@@ -132,28 +141,46 @@ class _FridgeDetailScreenState extends State<FridgeDetailScreen> {
                         color: const Color(0xFF4A90D9).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                            color: const Color(0xFF4A90D9).withOpacity(0.3)),
+                          color: const Color(0xFF4A90D9).withOpacity(0.3),
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('🔗 초대 코드',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 16)),
+                          Row(
+                            children: [
+                              const Icon(
+                                Iconsax.link,
+                                color: Color(0xFF4A90D9),
+                                size: 18,
+                              ),
+                              const SizedBox(width: 6),
+                              const Text(
+                                '초대 코드',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
                           const SizedBox(height: 8),
                           Row(
                             children: [
                               Text(
                                 inviteCode,
                                 style: const TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 4),
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 4,
+                                ),
                               ),
                               const Spacer(),
                               IconButton(
-                                icon: const Icon(Icons.copy,
-                                    color: Color(0xFF4A90D9)),
+                                icon: const Icon(
+                                  Icons.copy,
+                                  color: Color(0xFF4A90D9),
+                                ),
                                 onPressed: () => _copyInviteCode(inviteCode),
                               ),
                             ],
@@ -177,20 +204,36 @@ class _FridgeDetailScreenState extends State<FridgeDetailScreen> {
                         color: const Color(0xFF7BC67E).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                            color: const Color(0xFF7BC67E).withOpacity(0.3)),
+                          color: const Color(0xFF7BC67E).withOpacity(0.3),
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('👨‍👩‍👧‍👦 팀 플랜 인원 관리',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 16)),
+                          Row(
+                            children: [
+                              const Icon(
+                                Iconsax.people,
+                                color: Color(0xFF7BC67E),
+                                size: 18,
+                              ),
+                              const SizedBox(width: 6),
+                              const Text(
+                                '팀 플랜 인원 관리',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
                           const SizedBox(height: 8),
                           Row(
                             children: [
-                              const Text('추가 인원: ',
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.bold)),
+                              const Text(
+                                '추가 인원: ',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
                               const Text('(1명당 +1,000원, 최대 2명)'),
                             ],
                           ),
@@ -199,25 +242,33 @@ class _FridgeDetailScreenState extends State<FridgeDetailScreen> {
                             children: [
                               IconButton(
                                 onPressed: _extraMembers > 0
-                                    ? () => _updateExtraMembers(_extraMembers - 1)
+                                    ? () =>
+                                          _updateExtraMembers(_extraMembers - 1)
                                     : null,
                                 icon: const Icon(Icons.remove_circle_outline),
                                 color: const Color(0xFF7BC67E),
                               ),
-                              Text('$_extraMembers명',
-                                  style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold)),
+                              Text(
+                                '$_extraMembers명',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                               IconButton(
                                 onPressed: _extraMembers < 2
-                                    ? () => _updateExtraMembers(_extraMembers + 1)
+                                    ? () =>
+                                          _updateExtraMembers(_extraMembers + 1)
                                     : null,
                                 icon: const Icon(Icons.add_circle_outline),
                                 color: const Color(0xFF7BC67E),
                               ),
                               Text(
                                 '(총 ${4 + _extraMembers}명 / 월 ${_getTeamPrice()}원)',
-                                style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 12,
+                                ),
                               ),
                             ],
                           ),
@@ -228,10 +279,22 @@ class _FridgeDetailScreenState extends State<FridgeDetailScreen> {
                   ],
 
                   // 멤버 목록
-                  Text(
-                    '👥 멤버 (${members.length}명)',
-                    style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold),
+                  Row(
+                    children: [
+                      const Icon(
+                        Iconsax.people,
+                        color: Color(0xFF4A90D9),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '멤버 (${members.length}명)',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   ListView.builder(
@@ -251,26 +314,37 @@ class _FridgeDetailScreenState extends State<FridgeDetailScreen> {
                             child: Text(
                               member['username'][0].toUpperCase(),
                               style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold),
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           title: Text(member['username']),
                           subtitle: Text(member['email']),
                           trailing: memberIsOwner
-                              ? const Chip(
-                                  label: Text('👑 오너',
-                                      style: TextStyle(fontSize: 12)),
+                              ? Chip(
+                                  label: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Iconsax.crown, size: 12, color: Color(0xFFFFB347)),
+                                      SizedBox(width: 4),
+                                      Text('오너', style: TextStyle(fontSize: 12)),
+                                    ],
+                                  ),
                                   backgroundColor: Color(0xFFFFF3CD),
                                 )
                               : isOwner
-                                  ? IconButton(
-                                      icon: const Icon(Icons.person_remove,
-                                          color: Colors.red),
-                                      onPressed: () => _removeMember(
-                                          member['id'], member['username']),
-                                    )
-                                  : null,
+                              ? IconButton(
+                                  icon: const Icon(
+                                    Icons.person_remove,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () => _removeMember(
+                                    member['id'],
+                                    member['username'],
+                                  ),
+                                )
+                              : null,
                         ),
                       );
                     },

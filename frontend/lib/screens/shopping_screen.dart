@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:iconsax/iconsax.dart';
 
 class ShoppingScreen extends StatefulWidget {
   const ShoppingScreen({super.key});
@@ -105,7 +106,11 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
       appBar: AppBar(
         title: const Row(
           children: [
-            Text('🛒', style: TextStyle(fontSize: 24)),
+            const Icon(
+              Iconsax.shopping_cart,
+              color: Color(0xFF4A90D9),
+              size: 24,
+            ),
             SizedBox(width: 8),
             Text(
               '장보기 목록',
@@ -202,7 +207,11 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                     child: Column(
                       children: [
                         const SizedBox(height: 40),
-                        const Text('🛒', style: TextStyle(fontSize: 80)),
+                        const Icon(
+                          Iconsax.shopping_cart,
+                          color: Colors.grey,
+                          size: 80,
+                        ),
                         const SizedBox(height: 16),
                         const Text(
                           '장보기 목록이 비어있어요!',
@@ -216,12 +225,22 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                '📝 메모',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              const Row(
+                                children: [
+                                  const Icon(
+                                    Iconsax.note,
+                                    color: Color(0xFF4A90D9),
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    '메모',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 8),
                               TextField(
