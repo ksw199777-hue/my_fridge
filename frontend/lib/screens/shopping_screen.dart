@@ -179,15 +179,68 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _items.isEmpty
-                ? const Center(
+                ? SingleChildScrollView(
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text('🛒', style: TextStyle(fontSize: 80)),
-                        SizedBox(height: 16),
-                        Text(
+                        const SizedBox(height: 40),
+                        const Text('🛒', style: TextStyle(fontSize: 80)),
+                        const SizedBox(height: 16),
+                        const Text(
                           '장보기 목록이 비어있어요!',
                           style: TextStyle(fontSize: 18, color: Colors.grey),
+                        ),
+                        const SizedBox(height: 40),
+                        // 메모 섹션
+                        const SizedBox(height: 16),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                '📝 메모',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: _memoController,
+                                maxLines: 4,
+                                decoration: InputDecoration(
+                                  hintText:
+                                      '장보기 메모를 자유롭게 적어보세요!\n예) 마트 가는 날: 토요일, 예산: 5만원',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey.shade50,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('메모가 저장됐어요! 📝'),
+                                      ),
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF4A90D9),
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Text('메모 저장'),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
