@@ -14,18 +14,27 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLogin = true;
   bool _isLoading = false;
   final _emailController = TextEditingController();
+  final _emailLocalController = TextEditingController();
+  final _customDomainController = TextEditingController();
   final _passwordController = TextEditingController();
   final _usernameController = TextEditingController();
+  String _selectedDomain = 'naver.com';
 
-Future<void> _submit() async {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) return;
+  String get _fullEmail => _isLogin
+      ? _emailController.text
+      : _selectedDomain == '직접입력'
+          ? '${_emailLocalController.text}@${_customDomainController.text}'
+          : '${_emailLocalController.text}@$_selectedDomain';
+
+  Future<void> _submit() async {
+    if (_fullEmail.isEmpty || _passwordController.text.isEmpty) return;
     setState(() => _isLoading = true);
 
     try {
       Map<String, dynamic> result;
       if (_isLogin) {
         result = await ApiService.login(
-          _emailController.text,
+          _fullEmail,
           _passwordController.text,
         );
       } else {
@@ -34,7 +43,7 @@ Future<void> _submit() async {
           return;
         }
         result = await ApiService.register(
-          _emailController.text,
+          _fullEmail,
           _usernameController.text,
           _passwordController.text,
         );
@@ -68,6 +77,7 @@ Future<void> _submit() async {
 
     setState(() => _isLoading = false);
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -116,16 +126,87 @@ Future<void> _submit() async {
                   ),
                 ),
                 const SizedBox(height: 12),
-              ],
-              TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: '이메일',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.email, color: Color(0xFF4A90D9)),
+                // 회원가입 시 이메일 도메인 선택
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: TextField(
+                        controller: _emailLocalController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(
+                          labelText: '이메일 아이디',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.email, color: Color(0xFF4A90D9)),
+                        ),
+                      ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      child: Text('@', style: TextStyle(fontSize: 18)),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: DropdownButtonFormField<String>(
+                        value: _selectedDomain,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                        items: [
+                          'naver.com',
+                          'gmail.com',
+                          'kakao.com',
+                          'daum.net',
+                          'nate.com',
+                          'hanmail.net',
+                          '직접입력',
+                        ].map((domain) => DropdownMenuItem(
+                          value: domain,
+                          child: Text(domain, style: const TextStyle(fontSize: 13)),
+                        )).toList(),
+                        onChanged: (value) => setState(() => _selectedDomain = value!),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
+                if (_selectedDomain == '직접입력') ...[
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _customDomainController,
+                    decoration: const InputDecoration(
+                      labelText: '도메인 직접 입력',
+                      border: OutlineInputBorder(),
+                      prefixText: '@',
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 4),
+                const Row(
+                  children: [
+                    Icon(Icons.warning_amber, size: 12, color: Colors.red),
+                    SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        '실제 사용 중인 이메일을 입력해주세요. 비밀번호 찾기에 사용돼요!',
+                        style: TextStyle(fontSize: 11, color: Colors.red),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+              ],
+              // 로그인 시 이메일 입력
+              if (_isLogin)
+                TextField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    labelText: '이메일',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.email, color: Color(0xFF4A90D9)),
+                  ),
+                ),
               const SizedBox(height: 12),
               TextField(
                 controller: _passwordController,
@@ -167,7 +248,7 @@ Future<void> _submit() async {
                   ),
                 ),
               ),
-               if (_isLogin)
+              if (_isLogin)
                 Center(
                   child: TextButton(
                     onPressed: () {
