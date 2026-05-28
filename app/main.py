@@ -858,3 +858,45 @@ def remove_fridge_member(fridge_id: int, user_id: int, current_user: User = Depe
     db.delete(member)
     db.commit()
     return {"message": "멤버를 내보냈어요!"}
+
+class BudgetCreate(BaseModel):
+    year: int
+    month: int
+    budget: int
+    memo: str = ""
+
+@app.post("/budget")
+def set_budget(data: BudgetCreate, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+    from app.database import Budget
+    budget = db.query(Budget).filter(
+        Budget.user_id == current_user.id,
+        Budget.year == data.year,
+        Budget.month == data.month
+    ).first()
+    if budget:
+        budget.budget = data.budget
+        budget.memo = data.memo
+    else:
+        budget = Budget(
+            user_id=current_user.id,
+            year=data.year,
+            month=data.month,
+            budget=data.budget,
+            memo=data.memo
+        )
+        db.add(budget)
+    db.commit()
+    return {"message": "예산이 저장됐어요!"}
+
+@app.get("/budget")
+def get_budget(year: int, month: int, current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+    from app.database import Budget
+    budget = db.query(Budget).filter(
+        Budget.user_id == current_user.id,
+        Budget.year == year,
+        Budget.month == month
+    ).first()
+    return {
+        "budget": budget.budget if budget else 0,
+        "memo": budget.memo if budget else ""
+    }

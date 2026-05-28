@@ -458,4 +458,31 @@ class ApiService {
     );
     return response.statusCode == 200;
   }
+
+// 예산 조회
+static Future<Map<String, dynamic>> getBudget(int year, int month) async {
+  final response = await http.get(
+    Uri.parse('$baseUrl/budget?year=$year&month=$month'),
+    headers: _headers,
+  );
+  if (response.statusCode == 200) {
+    return jsonDecode(utf8.decode(response.bodyBytes));
+  }
+  return {'budget': 0, 'memo': ''};
+}
+
+// 예산 저장
+static Future<bool> setBudget(int year, int month, int budget, String memo) async {
+  final response = await http.post(
+    Uri.parse('$baseUrl/budget'),
+    headers: _headers,
+    body: jsonEncode({
+      'year': year,
+      'month': month,
+      'budget': budget,
+      'memo': memo,
+    }),
+  );
+  return response.statusCode == 200;
+}
 }
