@@ -18,29 +18,35 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   Future<void> _sendTempPassword() async {
     if (_emailController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('이메일을 입력해주세요')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('이메일을 입력해주세요')));
       return;
     }
 
     setState(() => _isLoading = true);
-    final result = await ApiService.forgotPassword(_emailController.text);
-    setState(() => _isLoading = false);
 
-    if (result['message'] != null) {
-      setState(() => _emailSent = true);
-      if (mounted) {
+    try {
+      final result = await ApiService.forgotPassword(_emailController.text);
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      if (result['message'] != null) {
+        setState(() => _emailSent = true);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('임시 비밀번호를 이메일로 발송했어요! 📧')),
         );
-      }
-    } else {
-      if (mounted) {
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(result['detail'] ?? '오류가 발생했어요')),
         );
       }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('오류가 발생했어요. 다시 시도해주세요')));
     }
   }
 
@@ -48,16 +54,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     if (_tempPasswordController.text.isEmpty ||
         _newPasswordController.text.isEmpty ||
         _confirmPasswordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('모든 항목을 입력해주세요')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('모든 항목을 입력해주세요')));
       return;
     }
 
     if (_newPasswordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('새 비밀번호가 일치하지 않아요')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('새 비밀번호가 일치하지 않아요')));
       return;
     }
 
@@ -90,8 +96,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('아이디/비밀번호 찾기',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          '아이디/비밀번호 찾기',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.white,
         elevation: 0,
       ),
@@ -102,9 +110,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('📧 이메일로 임시 비밀번호 받기',
-                      style: TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text(
+                    '📧 이메일로 임시 비밀번호 받기',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 8),
                   const Text(
                     '가입 시 사용한 이메일로 임시 비밀번호를 보내드려요',
@@ -126,7 +135,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _sendTempPassword,
+                        onPressed: () async {
+                          print('버튼 눌림!');
+                          await _sendTempPassword();
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF4A90D9),
                           foregroundColor: Colors.white,
@@ -141,16 +153,22 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
                   if (_emailSent) ...[
                     const SizedBox(height: 32),
-                    const Text('🔐 비밀번호 재설정',
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Text(
+                      '🔐 비밀번호 재설정',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     TextField(
                       controller: _tempPasswordController,
                       decoration: const InputDecoration(
                         labelText: '임시 비밀번호 (이메일 확인)',
-                        prefixIcon:
-                            Icon(Icons.lock_open, color: Color(0xFF4A90D9)),
+                        prefixIcon: Icon(
+                          Icons.lock_open,
+                          color: Color(0xFF4A90D9),
+                        ),
                         border: OutlineInputBorder(),
                       ),
                     ),
@@ -160,8 +178,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       obscureText: true,
                       decoration: const InputDecoration(
                         labelText: '새 비밀번호',
-                        prefixIcon:
-                            Icon(Icons.lock, color: Color(0xFF4A90D9)),
+                        prefixIcon: Icon(Icons.lock, color: Color(0xFF4A90D9)),
                         border: OutlineInputBorder(),
                       ),
                     ),
@@ -171,8 +188,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       obscureText: true,
                       decoration: const InputDecoration(
                         labelText: '새 비밀번호 확인',
-                        prefixIcon:
-                            Icon(Icons.lock, color: Color(0xFF4A90D9)),
+                        prefixIcon: Icon(Icons.lock, color: Color(0xFF4A90D9)),
                         border: OutlineInputBorder(),
                       ),
                     ),
