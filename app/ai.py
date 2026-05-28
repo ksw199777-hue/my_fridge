@@ -269,7 +269,7 @@ def recognize_receipt(image_bytes: bytes) -> list:
 
 def chat_recipe(message: str, ingredient_names: str) -> dict:
     message_response = client.messages.create(
-        model="claude-sonnet-4-5-20251022",
+        model="claude-sonnet-4-5",
         max_tokens=2048,
         messages=[
             {
@@ -327,7 +327,7 @@ def estimate_price(items: list) -> dict:
     item_names = ", ".join([f"{item['name']} {item['quantity']}" for item in items])
     
     message = client.messages.create(
-        model="claude-sonnet-4-5-20251022",
+        model="claude-sonnet-4-5",
         max_tokens=1024,
         tools=[
             {
