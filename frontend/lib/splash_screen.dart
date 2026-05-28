@@ -62,7 +62,7 @@ Widget build(BuildContext context) {
               Text(
                 '나만의 냉장고',
                 style: GoogleFonts.jua(
-                  fontSize: 72,
+                  fontSize: 65,
                   color: const Color(0xFF4A90D9),
                   letterSpacing: -1,
                 ),
