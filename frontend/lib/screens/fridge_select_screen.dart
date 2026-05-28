@@ -139,65 +139,50 @@ class _FridgeSelectScreenState extends State<FridgeSelectScreen> {
                             fridge['name'],
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          subtitle: fridge['is_owner']
-                              ? Row(
-                                  children: [
-                                    Text(
-                                      '초대코드: ${fridge['invite_code']}',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                    InkWell(
-                                      onTap: () {
-                                        Clipboard.setData(
-                                          ClipboardData(
-                                            text: fridge['invite_code'],
-                                          ),
-                                        );
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('초대코드가 복사됐어요!'),
-                                          ),
-                                        );
-                                      },
-                                      child: const Padding(
-                                        padding: EdgeInsets.all(4),
-                                        child: Icon(
-                                          Icons.copy,
-                                          size: 14,
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : const Text(
-                                  '공유 냉장고',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey,
-                                  ),
+                          subtitle: Row(
+                            children: [
+                              Icon(
+                                fridge['is_owner']
+                                    ? Iconsax.crown
+                                    : Iconsax.people,
+                                size: 14,
+                                color: fridge['is_owner']
+                                    ? const Color(0xFFFFB347)
+                                    : const Color(0xFF4A90D9),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                fridge['is_owner'] ? '오너' : '팀원',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: fridge['is_owner']
+                                      ? const Color(0xFFFFB347)
+                                      : const Color(0xFF4A90D9),
                                 ),
+                              ),
+                            ],
+                          ),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              ElevatedButton(
-                                onPressed: () => _selectFridge(fridge['id']),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF4A90D9),
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
+                              IconButton(
+                                icon: const Icon(
+                                  Iconsax.setting_2,
+                                  color: Colors.grey,
                                 ),
-                                child: const Text('선택'),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => FridgeDetailScreen(
+                                        fridgeId: fridge['id'],
+                                        fridgeName: fridge['name'],
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                               if (fridge['is_owner']) ...[
-                                const SizedBox(width: 4),
                                 IconButton(
                                   icon: const Icon(
                                     Icons.delete_outline,
