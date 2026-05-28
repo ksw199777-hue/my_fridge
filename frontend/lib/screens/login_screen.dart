@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../api_service.dart';
 import 'fridge_select_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -166,6 +167,23 @@ Future<void> _submit() async {
                   ),
                 ),
               ),
+               if (_isLogin)
+                Center(
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ForgotPasswordScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      '아이디/비밀번호 찾기',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
