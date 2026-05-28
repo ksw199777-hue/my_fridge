@@ -932,8 +932,7 @@ def forgot_password(email: str, db: Session = Depends(get_db)):
         body = f"임시 비밀번호: {temp_password}\n\n앱에서 임시 비밀번호로 로그인 후 비밀번호를 변경해주세요."
         msg.attach(MIMEText(body, 'plain'))
         
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
+        server = smtplib.SMTP('smtp.gmail.com', 465)
         server.login(gmail_user, gmail_password)
         server.sendmail(gmail_user, email, msg.as_string())
         server.quit()
