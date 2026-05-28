@@ -61,7 +61,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   @override
   Widget build(BuildContext context) {
     final history = (_expenseHistory['history'] as List<dynamic>?) ?? [];
-    final thisMonthTotal = _monthlyExpenses['total_amount'] ?? 0;
+    final thisMonthTotal = _monthlyExpenses['total_expense'] ?? 0;
     final budgetAmount = _budget['budget'] ?? 0;
     final diff = thisMonthTotal - budgetAmount;
     final lastMonthDiff = _expenseHistory['diff_from_last_month'] ?? 0;
