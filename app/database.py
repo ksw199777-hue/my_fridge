@@ -96,3 +96,12 @@ def get_db():
 
 def create_tables():
     Base.metadata.create_all(bind=engine)
+    
+class Budget(Base):
+    __tablename__ = "budgets"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    year = Column(Integer)
+    month = Column(Integer)
+    budget = Column(Integer, default=0)
+    memo = Column(String, default="")
