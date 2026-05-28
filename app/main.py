@@ -340,9 +340,13 @@ def create_ingredient(item: IngredientCreate, fridge_id: int, current_user: User
     
     # 소비기한 비워두면 AI 자동 산출
     consume_days = item.consume_days
-    if consume_days == 7:  # 기본값이면 AI로 산출
-        from app.ai import get_consume_days_by_storage
-        consume_days = get_consume_days_by_storage(item.name, item.storage_type)
+    if consume_days == 7:
+        try:
+            from app.ai import get_consume_days_by_storage
+            consume_days = get_consume_days_by_storage(item.name, item.storage_type)
+        except Exception:
+            defaults = {"냉장": 7, "냉동": 90, "실온": 3}
+            consume_days = defaults.get(item.storage_type, 7)
     
     ingredient = Ingredient(
         name=item.name,

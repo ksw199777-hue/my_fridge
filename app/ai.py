@@ -14,7 +14,7 @@ def recognize_ingredients(image_bytes: bytes) -> list:
     image_base64 = base64.standard_b64encode(image_bytes).decode("utf-8")
     
     message = client.messages.create(
-        model="claude-opus-4-5-20251101",
+        model="claude-haiku-4-5-20251001",
         max_tokens=1024,
         messages=[
             {
@@ -73,6 +73,12 @@ def recommend_recipes(ingredients: list) -> list:
                 "role": "user",
                 "content": f"""다음 재료들로 만들 수 있는 요리를 추천해주세요.
 재료: {ingredient_names}
+
+중요 규칙:
+- 반드시 실제로 존재하는 메뉴만 추천해주세요 (예: 김치찌개, 된장찌개, 삼겹살구이, 볶음밥 등)
+- 한국 가정식이나 시중 음식점에서 흔히 볼 수 있는 메뉴여야 해요
+- AI가 창의적으로 만들어낸 이상한 조합의 메뉴는 절대 추천하지 마세요
+- 일반 마트나 시장에서 구할 수 있는 재료로 만드는 메뉴여야 해요
 
 다음 JSON 형식으로만 답해주세요:
 {{
@@ -164,7 +170,7 @@ def recognize_expiry_date(image_bytes: bytes) -> dict:
     image_base64 = base64.standard_b64encode(image_bytes).decode("utf-8")
     
     message = client.messages.create(
-        model="claude-opus-4-5",
+        model="claude-haiku-4-5-20251001",
         max_tokens=1024,
         messages=[
             {
@@ -210,7 +216,7 @@ def recognize_receipt(image_bytes: bytes) -> list:
     image_base64 = base64.standard_b64encode(image_bytes).decode("utf-8")
     
     message = client.messages.create(
-        model="claude-opus-4-5",
+        model="claude-haiku-4-5-20251001",
         max_tokens=1024,
         messages=[
             {
@@ -263,7 +269,7 @@ def recognize_receipt(image_bytes: bytes) -> list:
 
 def chat_recipe(message: str, ingredient_names: str) -> dict:
     message_response = client.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model="claude-sonnet-4-5-20251022",
         max_tokens=2048,
         messages=[
             {
@@ -321,7 +327,7 @@ def estimate_price(items: list) -> dict:
     item_names = ", ".join([f"{item['name']} {item['quantity']}" for item in items])
     
     message = client.messages.create(
-        model="claude-opus-4-5",
+        model="claude-sonnet-4-5-20251022",
         max_tokens=1024,
         tools=[
             {
@@ -368,7 +374,7 @@ def estimate_price(items: list) -> dict:
 
 def get_consume_days_by_storage(ingredient_name: str, storage_type: str) -> int:
     message = client.messages.create(
-        model="claude-opus-4-5",
+        model="claude-haiku-4-5-20251001",
         max_tokens=512,
         tools=[
             {
