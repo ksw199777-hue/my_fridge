@@ -17,17 +17,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   bool _emailSent = false;
 
   Future<void> _sendTempPassword() async {
+    print('_sendTempPassword 시작'); 
     if (_emailController.text.isEmpty) {
+      print('이메일 비어있음');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('이메일을 입력해주세요')));
       return;
     }
-
+    print('이메일: ${_emailController.text}');
     setState(() => _isLoading = true);
+    print('API 호출 시작');
 
     try {
       final result = await ApiService.forgotPassword(_emailController.text);
+      print('API 응답: $result');
       if (!mounted) return;
       setState(() => _isLoading = false);
 
