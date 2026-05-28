@@ -15,6 +15,11 @@ import firebase_admin
 from firebase_admin import credentials, messaging
 from typing import Optional
 import os
+import smtplib
+import random
+import string
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 load_dotenv()
 
@@ -900,3 +905,68 @@ def get_budget(year: int, month: int, current_user: User = Depends(require_user)
         "budget": budget.budget if budget else 0,
         "memo": budget.memo if budget else ""
     }
+    
+# 임시 비밀번호 저장 (실제로는 Redis 사용하지만 간단히 딕셔너리로)
+reset_tokens = {}
+
+@app.post("/auth/forgot-password")
+def forgot_password(email: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="등록되지 않은 이메일이에요")
+    
+    # 임시 비밀번호 생성 (6자리 숫자)
+    temp_password = ''.join(random.choices(string.digits, k=6))
+    reset_tokens[email] = temp_password
+    
+    # 이메일 발송
+    try:
+        gmail_user = os.getenv("GMAIL_USER")
+        gmail_password = os.getenv("GMAIL_PASSWORD")
+        
+        msg = MIMEMultipart()
+        msg['From'] = gmail_user
+        msg['To'] = email
+        msg['Subject'] = '[나만의 냉장고] 임시 비밀번호 안내'
+        
+        body = f"""
+안녕하세요! 나만의 냉장고입니다.
+
+임시 비밀번호: {temp_password}
+
+앱에서 임시 비밀번호로 로그인 후 비밀번호를 변경해주세요.
+
+감사합니다.
+        """
+        msg.attach(MIMEText(body, 'plain'))
+        
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(gmail_user, gmail_password)
+        server.sendmail(gmail_user, email, msg.as_string())
+        server.quit()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="이메일 발송에 실패했어요")
+    
+    return {"message": "임시 비밀번호를 이메일로 발송했어요!"}
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    temp_password: str
+    new_password: str
+
+@app.post("/auth/reset-password")
+def reset_password(data: ResetPasswordRequest, db: Session = Depends(get_db)):
+    if reset_tokens.get(data.email) != data.temp_password:
+        raise HTTPException(status_code=400, detail="임시 비밀번호가 올바르지 않아요")
+    
+    user = db.query(User).filter(User.email == data.email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없어요")
+    
+    import bcrypt
+    user.password_hash = bcrypt.hashpw(data.new_password.encode(), bcrypt.gensalt()).decode()
+    db.commit()
+    
+    del reset_tokens[data.email]
+    return {"message": "비밀번호가 변경됐어요!"}
