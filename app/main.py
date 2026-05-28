@@ -488,8 +488,10 @@ def delete_ingredient(ingredient_id: int, delete_history: bool = False, db: Sess
         raise HTTPException(status_code=404, detail="재료를 찾을 수 없어요")
     
     if delete_history:
+        # 이름 + 등록날짜 기준으로 해당 기록만 삭제
         db.query(PurchaseHistory).filter(
-            PurchaseHistory.name == ingredient.name
+            PurchaseHistory.name == ingredient.name,
+            PurchaseHistory.purchased_date == ingredient.registered_date
         ).delete()
     
     db.delete(ingredient)
