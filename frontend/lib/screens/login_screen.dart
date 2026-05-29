@@ -95,9 +95,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     Icon(Icons.kitchen, size: 80, color: Color(0xFF4A90D9)),
                     SizedBox(height: 16),
                     Text(
-                      '나만의 냉장고',
+                      '시워냉',
                       style: TextStyle(
-                        fontSize: 32,
+                        fontSize: 40,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF4A90D9),
                       ),

@@ -89,6 +89,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
       MaterialPageRoute(
         builder: (_) => CoupangSplitScreen(
           initialItemName: itemName,
+          partnerUrl: 'https://link.coupang.com/a/d80FY5XY8O',
           items: _items,
           checkedIds: _checkedIds,
           onToggleCheck: (id, checked) {
@@ -358,6 +359,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
 // 쿠팡 분할 화면
 class CoupangSplitScreen extends StatefulWidget {
   final String initialItemName;
+  final String partnerUrl;
   final List<dynamic> items;
   final Set<int> checkedIds;
   final void Function(int, bool) onToggleCheck;
@@ -366,6 +368,7 @@ class CoupangSplitScreen extends StatefulWidget {
   const CoupangSplitScreen({
     super.key,
     required this.initialItemName,
+    required this.partnerUrl,
     required this.items,
     required this.checkedIds,
     required this.onToggleCheck,
@@ -385,19 +388,18 @@ class _CoupangSplitScreenState extends State<CoupangSplitScreen> {
   void initState() {
     super.initState();
     _localCheckedIds = Set.from(widget.checkedIds);
-    final encodedName = Uri.encodeComponent(widget.initialItemName);
     _webViewController = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(NavigationDelegate(
         onNavigationRequest: (request) => NavigationDecision.navigate,
       ))
-      ..loadRequest(Uri.parse('https://www.coupang.com/np/search?q=$encodedName&channel=myfridge'));
+      ..loadRequest(Uri.parse(widget.partnerUrl));
   }
 
   void _searchCoupang(String itemName) {
-    final encodedName = Uri.encodeComponent(itemName);
+    // 파트너스 링크로 재진입 후 검색
     _webViewController.loadRequest(
-      Uri.parse('https://www.coupang.com/np/search?q=$encodedName&channel=myfridge'),
+      Uri.parse(widget.partnerUrl),
     );
   }
 
@@ -469,7 +471,10 @@ class _CoupangSplitScreenState extends State<CoupangSplitScreen> {
                   // 목록
                   if (_isListExpanded)
                     Expanded(
-                      child: ListView.builder(
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: ListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         itemCount: widget.items.length,
                         itemBuilder: (context, index) {
@@ -537,6 +542,17 @@ class _CoupangSplitScreenState extends State<CoupangSplitScreen> {
                             ),
                           );
                         },
+                          ),
+                          ),
+                          // 파트너스 문구
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            child: Text(
+                              '※ 이 앱은 쿠팡 파트너스 활동의 일환으로 수수료를 제공받을 수 있습니다.',
+                              style: TextStyle(fontSize: 10, color: Colors.grey.shade400),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                 ],
