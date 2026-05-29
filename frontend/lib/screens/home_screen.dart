@@ -25,11 +25,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadIngredients();
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
   Future<void> _loadIngredients() async {
     setState(() => _isLoading = true);
     final ingredients = await ApiService.getIngredients();
@@ -81,12 +76,12 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'D-$dDay';
   }
 
-  String _getLocationEmoji(String location) {
+  IconData _getLocationIcon(String location) {
     switch (location) {
-      case '냉장': return '🧊';
-      case '냉동': return '❄️';
-      case '실온': return '🌡️';
-      default: return '📦';
+      case '냉장': return Iconsax.wind;
+      case '냉동': return Iconsax.cloud;
+      case '실온': return Iconsax.sun_1;
+      default: return Iconsax.box;
     }
   }
 
@@ -173,7 +168,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final nameController = TextEditingController(text: item['name']);
     final priceController = TextEditingController(text: '${item['price']}');
     String selectedLocation = item['location'];
-    // 등록일 기준 소비기한 날짜 선택용
     DateTime? selectedConsumeDate;
 
     showModalBottomSheet(
@@ -196,10 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Center(
                   child: Container(
                     width: 40, height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+                    decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -218,7 +209,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            '소비기한이 지났어요!\n재료 상태 확인 후 폐기 완료하면 삭제해주세요 🗑️',
+                            '소비기한이 지났어요!\n재료 상태 확인 후 폐기 완료하면 삭제해주세요',
                             style: TextStyle(color: Colors.red, fontSize: 13),
                           ),
                         ),
@@ -235,22 +226,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 16),
                 const Divider(),
                 const SizedBox(height: 8),
-                const Text('✏️ 수정하기', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Row(children: const [
+                  Icon(Iconsax.edit, color: Color(0xFF4A90D9), size: 18),
+                  SizedBox(width: 8),
+                  Text('수정하기', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ]),
                 const SizedBox(height: 12),
-                // 재료 이름
                 TextField(
                   controller: nameController,
                   decoration: const InputDecoration(
                     labelText: '재료 이름',
                     border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.food_bank, color: Color(0xFF4A90D9)),
+                    prefixIcon: Icon(Iconsax.box, color: Color(0xFF4A90D9)),
                   ),
                 ),
                 const SizedBox(height: 10),
                 // 소비기한 달력 선택
                 GestureDetector(
                   onTap: () async {
-                    // 등록일 파싱
                     DateTime registeredDate;
                     try {
                       registeredDate = DateTime.parse(item['registered_date']);
@@ -260,16 +253,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     final picked = await showDatePicker(
                       context: context,
                       initialDate: selectedConsumeDate ?? DateTime.now(),
-                      // 등록일부터 선택 가능
                       firstDate: registeredDate,
                       lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
-                      locale: const Locale('ko', 'KR'),
-                      helpText: '소비기한 선택 (등록일 기준)',
+                      helpText: '소비기한 선택',
                       builder: (context, child) => Theme(
                         data: Theme.of(context).copyWith(
-                          colorScheme: const ColorScheme.light(
-                            primary: Color(0xFF4A90D9),
-                          ),
+                          colorScheme: const ColorScheme.light(primary: Color(0xFF4A90D9)),
                         ),
                         child: child!,
                       ),
@@ -287,7 +276,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.calendar_month, color: Color(0xFFFFB347)),
+                        const Icon(Iconsax.calendar, color: Color(0xFFFFB347)),
                         const SizedBox(width: 12),
                         Text(
                           selectedConsumeDate != null
@@ -303,24 +292,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                // 가격
                 TextField(
                   controller: priceController,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
                     labelText: '가격 (원)',
                     border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.attach_money, color: Color(0xFFFF6B6B)),
+                    prefixIcon: Icon(Iconsax.money, color: Color(0xFFFF6B6B)),
                   ),
                 ),
                 const SizedBox(height: 10),
-                // 보관 위치
                 DropdownButtonFormField<String>(
                   value: selectedLocation,
                   decoration: const InputDecoration(
                     labelText: '보관 위치',
                     border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.location_on, color: Color(0xFFDDA0DD)),
+                    prefixIcon: Icon(Iconsax.location, color: Color(0xFFDDA0DD)),
                   ),
                   items: ['냉장', '냉동', '실온']
                       .map((loc) => DropdownMenuItem(value: loc, child: Text(loc)))
@@ -333,9 +320,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: ElevatedButton(
                     onPressed: () async {
                       int? newConsumeDays;
-
                       if (selectedConsumeDate != null) {
-                        // 달력으로 선택한 경우: 등록일 기준으로 계산
                         DateTime registeredDate;
                         try {
                           registeredDate = DateTime.parse(item['registered_date']);
@@ -345,12 +330,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         newConsumeDays = selectedConsumeDate!.difference(registeredDate).inDays;
                         if (newConsumeDays < 0) newConsumeDays = 0;
                       } else if (selectedLocation != item['location']) {
-                        // 보관방법만 바뀐 경우: 등록일 기준 AI 재계산
                         final days = await ApiService.calculateConsumeDays(
                           name: item['name'],
                           storageType: selectedLocation,
                         );
-                        // 등록일부터 오늘까지 지난 일수 + AI 계산 days
                         DateTime registeredDate;
                         try {
                           registeredDate = DateTime.parse(item['registered_date']);
@@ -361,7 +344,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         newConsumeDays = days - daysSinceRegistered;
                         if (newConsumeDays < 1) newConsumeDays = 1;
                       }
-
                       await ApiService.updateIngredient(
                         item['id'],
                         name: nameController.text,
@@ -436,7 +418,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: Text(isExpired ? '🗑️ 폐기 완료 - 삭제하기' : '삭제하기', style: const TextStyle(fontSize: 16)),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Iconsax.trash, size: 18),
+                        const SizedBox(width: 8),
+                        Text(isExpired ? '폐기 완료 - 삭제하기' : '삭제하기', style: const TextStyle(fontSize: 16)),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -509,31 +498,34 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: ['전체', '냉장', '냉동', '실온', '만료'].map((location) {
-                      final isSelected = _selectedLocation == location;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: GestureDetector(
-                          onTap: () => setState(() => _selectedLocation = location),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: isSelected ? const Color(0xFF4A90D9) : Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              location,
-                              style: TextStyle(
-                                color: isSelected ? Colors.white : Colors.grey,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: ['전체', '냉장', '냉동', '실온', '만료'].map((location) {
+                        final isSelected = _selectedLocation == location;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: GestureDetector(
+                            onTap: () => setState(() => _selectedLocation = location),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isSelected ? const Color(0xFF4A90D9) : Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                location,
+                                style: TextStyle(
+                                  color: isSelected ? Colors.white : Colors.grey,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      );
-                    }).toList(),
+                        );
+                      }).toList(),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -543,7 +535,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Iconsax.alarm, color: Colors.grey, size: 60),
+                              const Icon(Iconsax.box, color: Colors.grey, size: 60),
                               const SizedBox(height: 16),
                               Text('$_selectedLocation 재료가 없어요!', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey)),
                             ],
@@ -579,49 +571,71 @@ class _HomeScreenState extends State<HomeScreen> {
                                     borderRadius: BorderRadius.circular(16),
                                     side: isSelected ? const BorderSide(color: Color(0xFF4A90D9), width: 2) : BorderSide.none,
                                   ),
-                                  child: ListTile(
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                    leading: _isSelectionMode
-                                        ? Checkbox(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    child: Row(
+                                      children: [
+                                        if (_isSelectionMode)
+                                          Checkbox(
                                             value: isSelected,
                                             onChanged: (_) => _toggleSelect(item['id'] as int),
                                             activeColor: const Color(0xFF4A90D9),
-                                          )
-                                        : null, // ← 첫글자 아바타 제거
-                                    title: Text(
-                                      item['name'],
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 18, // ← 글씨 키움
-                                      ),
-                                    ),
-                                    subtitle: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const SizedBox(height: 4),
-                                        Text('${_getLocationEmoji(item['location'])} ${item['location']}'),
-                                        if (item['expiry_date'] != null)
-                                        Text('🗓 소비기한: ${item['consume_date']}'),
-                                        if (item['has_expiry_label'] == 0)
-                                          const Text(
-                                            '⚠️ 오늘 기준 산출 (탭해서 수정 가능)',
-                                            style: TextStyle(fontSize: 11, color: Colors.orange),
                                           ),
-                                        if (item['price'] > 0)
-                                          Text('💰 ${item['price']}원'),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              // 재료 이름 크게
+                                              Text(
+                                                item['name'],
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 22, // 2배 크기
+                                                ),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              // 보관 위치 (iconsax 아이콘)
+                                              Row(children: [
+                                                Icon(_getLocationIcon(item['location']), size: 14, color: Colors.grey.shade600),
+                                                const SizedBox(width: 4),
+                                                Text(item['location'], style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                                              ]),
+                                              const SizedBox(height: 2),
+                                              // 소비기한 (iconsax 아이콘)
+                                              Row(children: [
+                                                Icon(Iconsax.calendar_1, size: 14, color: Colors.grey.shade600),
+                                                const SizedBox(width: 4),
+                                                Text('소비기한: ${item['consume_date']}', style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                                              ]),
+                                              if (item['has_expiry_label'] == 0)
+                                                Row(children: [
+                                                  Icon(Iconsax.info_circle, size: 13, color: Colors.orange.shade600),
+                                                  const SizedBox(width: 4),
+                                                  const Text('오늘 기준 산출 (탭해서 수정)', style: TextStyle(fontSize: 11, color: Colors.orange)),
+                                                ]),
+                                              if (item['price'] > 0)
+                                                Row(children: [
+                                                  Icon(Iconsax.coin, size: 14, color: Colors.grey.shade600),
+                                                  const SizedBox(width: 4),
+                                                  Text('${item['price']}원', style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                                                ]),
+                                            ],
+                                          ),
+                                        ),
+                                        // D-Day 배지
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: _getDdayColor(dDay).withOpacity(0.15),
+                                            borderRadius: BorderRadius.circular(20),
+                                            border: Border.all(color: _getDdayColor(dDay)),
+                                          ),
+                                          child: Text(
+                                            _getDdayText(dDay),
+                                            style: TextStyle(color: _getDdayColor(dDay), fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
                                       ],
-                                    ),
-                                    trailing: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: _getDdayColor(dDay).withOpacity(0.15),
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(color: _getDdayColor(dDay)),
-                                      ),
-                                      child: Text(
-                                        _getDdayText(dDay),
-                                        style: TextStyle(color: _getDdayColor(dDay), fontWeight: FontWeight.bold),
-                                      ),
                                     ),
                                   ),
                                 ),
