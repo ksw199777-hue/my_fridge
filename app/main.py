@@ -975,6 +975,9 @@ def search_recipes(query: str, current_user: User = Depends(require_user)):
     client_id = os.environ.get("NAVER_CLIENT_ID")
     client_secret = os.environ.get("NAVER_CLIENT_SECRET")
     
+    print(f"client_id: {client_id}")  # 추가
+    print(f"query: {query}")  # 추가
+    
     url = "https://openapi.naver.com/v1/search/blog.json"
     headers = {
         "X-Naver-Client-Id": client_id,
@@ -987,6 +990,8 @@ def search_recipes(query: str, current_user: User = Depends(require_user)):
     }
     
     response = req.get(url, headers=headers, params=params)
+    print(f"네이버 응답: {response.status_code}")  # 추가
+    print(f"네이버 결과: {response.json()}")  # 추가
     data = response.json()
     
     return {

@@ -529,6 +529,8 @@ class ApiService {
       Uri.parse('$baseUrl/recipe/search?query=${Uri.encodeComponent(query)}'),
       headers: _headers,
     );
+    print('검색 응답: ${response.statusCode}');
+    print('검색 결과: ${response.body}');
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return data['items'] ?? [];
