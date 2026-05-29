@@ -15,6 +15,8 @@ class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _ingredients = [];
   bool _isLoading = true;
   String _selectedLocation = '전체';
+  String _searchQuery = '';
+  final _searchController = TextEditingController();
   bool _isSelectionMode = false;
   Set<int> _selectedIds = {};
   String _fridgeName = '';
@@ -23,6 +25,12 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadIngredients();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadIngredients() async {
@@ -44,6 +52,12 @@ class _HomeScreenState extends State<HomeScreen> {
       filtered = _ingredients.where((i) => i['d_day'] < 0).toList();
     } else {
       filtered = _ingredients.where((i) => i['location'] == _selectedLocation).toList();
+    }
+    // 검색어 필터
+    if (_searchQuery.isNotEmpty) {
+      filtered = filtered.where((i) =>
+        (i['name'] as String).toLowerCase().contains(_searchQuery.toLowerCase())
+      ).toList();
     }
     filtered.sort((a, b) {
       int dDayA = a['d_day'] as int;
@@ -493,6 +507,34 @@ class _HomeScreenState extends State<HomeScreen> {
                       _SummaryItem(icon: Iconsax.warning_2, count: _ingredients.where((i) => i['d_day'] >= 0 && i['d_day'] <= 3).length, label: '임박', iconColor: Colors.yellow),
                       _SummaryItem(icon: Iconsax.close_circle, count: _ingredients.where((i) => i['d_day'] < 0).length, label: '만료', iconColor: Colors.redAccent),
                     ],
+                  ),
+                ),
+                // 검색창
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                    decoration: InputDecoration(
+                      hintText: '재료 검색 (예: 깨, 당근...)',
+                      prefixIcon: const Icon(Iconsax.search_normal, color: Color(0xFF4A90D9)),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.close, color: Colors.grey),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                    ),
                   ),
                 ),
                 Padding(
