@@ -157,7 +157,7 @@ def startup():
         firebase_admin.initialize_app(cred)
     
     scheduler = BackgroundScheduler()
-    scheduler.add_job(check_expiry, CronTrigger(hour=9, minute=0))
+    scheduler.add_job(check_expiry, CronTrigger(hour=9, minute=0, timezone="Asia/Seoul"))
     scheduler.start()
     
 @app.get("/")
