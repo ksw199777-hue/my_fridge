@@ -90,9 +90,15 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
         builder: (_) => CoupangSplitScreen(
           initialItemName: itemName,
           items: _items,
-          onMarkPurchased: (id) async {
-            await ApiService.markPurchased(id);
-            _loadItems();
+          checkedIds: _checkedIds,
+          onToggleCheck: (id, checked) {
+            setState(() {
+              if (checked) {
+                _checkedIds.add(id);
+              } else {
+                _checkedIds.remove(id);
+              }
+            });
           },
           onDelete: (id) async {
             await ApiService.deleteShoppingItem(id);
@@ -372,14 +378,16 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
 class CoupangSplitScreen extends StatefulWidget {
   final String initialItemName;
   final List<dynamic> items;
-  final Future<void> Function(int) onMarkPurchased;
+  final Set<int> checkedIds;
+  final void Function(int, bool) onToggleCheck;
   final Future<void> Function(int) onDelete;
 
   const CoupangSplitScreen({
     super.key,
     required this.initialItemName,
     required this.items,
-    required this.onMarkPurchased,
+    required this.checkedIds,
+    required this.onToggleCheck,
     required this.onDelete,
   });
 
@@ -390,11 +398,13 @@ class CoupangSplitScreen extends StatefulWidget {
 class _CoupangSplitScreenState extends State<CoupangSplitScreen> {
   late WebViewController _webViewController;
   bool _isListExpanded = true;
-  double _listHeightRatio = 0.3; // 목록 30%, 쿠팡 70%
+  double _listHeightRatio = 0.3;
+  late Set<int> _localCheckedIds; // 목록 30%, 쿠팡 70%
 
   @override
   void initState() {
     super.initState();
+    _localCheckedIds = Set.from(widget.checkedIds);
     final encodedName = Uri.encodeComponent(widget.initialItemName);
     _webViewController = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
@@ -486,22 +496,41 @@ class _CoupangSplitScreenState extends State<CoupangSplitScreen> {
                       itemCount: widget.items.length,
                       itemBuilder: (context, index) {
                         final item = widget.items[index];
+                        final isChecked = _localCheckedIds.contains(item['id']);
                         return Card(
                           margin: const EdgeInsets.only(bottom: 4),
                           child: ListTile(
                             dense: true,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                            leading: IconButton(
-                              icon: const Icon(Icons.check_circle_outline, color: Color(0xFF4A90D9), size: 20),
-                              onPressed: () async {
-                                await widget.onMarkPurchased(item['id']);
-                                setState(() {});
+                            leading: Checkbox(
+                              value: isChecked,
+                              onChanged: (val) {
+                                final checked = val ?? false;
+                                setState(() {
+                                  if (checked) {
+                                    _localCheckedIds.add(item['id']);
+                                  } else {
+                                    _localCheckedIds.remove(item['id']);
+                                  }
+                                });
+                                widget.onToggleCheck(item['id'], checked);
                               },
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
+                              activeColor: const Color(0xFF4A90D9),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
-                            title: Text(item['name'], style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                            subtitle: Text(item['quantity'], style: const TextStyle(fontSize: 12)),
+                            title: Text(
+                              item['name'],
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: isChecked ? Colors.grey.shade400 : Colors.black,
+                              ),
+                            ),
+                            subtitle: Text(
+                              item['quantity'],
+                              style: TextStyle(fontSize: 12, color: isChecked ? Colors.grey.shade300 : Colors.grey),
+                            ),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
