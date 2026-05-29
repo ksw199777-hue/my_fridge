@@ -244,47 +244,42 @@ class _HomeScreenState extends State<HomeScreen> {
                 // 소비기한 달력 선택
                 GestureDetector(
                   onTap: () async {
-                    DateTime registeredDate;
-                    try {
-                      registeredDate = DateTime.parse(item['registered_date']);
-                    } catch (_) {
-                      registeredDate = DateTime.now();
-                    }
                     final picked = await showDatePicker(
                       context: context,
                       initialDate: selectedConsumeDate ?? DateTime.now(),
-                      firstDate: registeredDate,
-                      lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
-                      helpText: '소비기한 선택',
-                      builder: (context, child) => Theme(
-                        data: Theme.of(context).copyWith(
-                          colorScheme: const ColorScheme.light(primary: Color(0xFF4A90D9)),
-                        ),
-                        child: child!,
-                      ),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 3650)),
+                      builder: (context, child) {
+                        return Theme(
+                          data: ThemeData.light().copyWith(
+                            colorScheme: const ColorScheme.light(
+                              primary: Color(0xFF4A90D9),
+                            ),
+                          ),
+                          child: child!,
+                        );
+                      },
                     );
                     if (picked != null) {
                       setModalState(() => selectedConsumeDate = picked);
                     }
                   },
                   child: Container(
-                    width: double.infinity,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade400),
+                      border: Border.all(color: Colors.grey),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Iconsax.calendar, color: Color(0xFFFFB347)),
+                        const Icon(Icons.calendar_month, color: Color(0xFFFFB347), size: 20),
                         const SizedBox(width: 12),
                         Text(
-                          selectedConsumeDate != null
-                              ? '소비기한: ${selectedConsumeDate!.toLocal().toString().split(' ')[0]}'
-                              : '소비기한 날짜 선택 (탭하세요)',
+                          selectedConsumeDate == null
+                              ? '소비기한 선택 (선택 안하면 기존 유지)'
+                              : '소비기한: ${selectedConsumeDate!.year}-${selectedConsumeDate!.month.toString().padLeft(2, '0')}-${selectedConsumeDate!.day.toString().padLeft(2, '0')}',
                           style: TextStyle(
-                            color: selectedConsumeDate != null ? Colors.black87 : Colors.grey,
-                            fontSize: 16,
+                            color: selectedConsumeDate == null ? Colors.grey : Colors.black,
                           ),
                         ),
                       ],
