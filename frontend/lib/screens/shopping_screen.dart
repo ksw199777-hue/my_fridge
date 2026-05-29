@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import '../api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iconsax/iconsax.dart';
@@ -29,9 +29,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('shopping_memo', _memoController.text);
     if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('메모가 저장됐어요!')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('메모가 저장됐어요!')));
     }
   }
 
@@ -70,14 +68,8 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
         title: const Text('전체 삭제'),
         content: const Text('장보기 목록을 전부 삭제할까요?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('취소'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('삭제', style: TextStyle(color: Colors.red)),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('취소')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('삭제', style: TextStyle(color: Colors.red))),
         ],
       ),
     );
@@ -89,14 +81,24 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     }
   }
 
-  void _openCoupang(String itemName) async {
-    final encodedName = Uri.encodeComponent(itemName);
-    final url = Uri.parse(
-      'https://www.coupang.com/np/search?q=$encodedName&channel=myfridge',
+  void _openCoupangSplit(String itemName) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CoupangSplitScreen(
+          initialItemName: itemName,
+          items: _items,
+          onMarkPurchased: (id) async {
+            await ApiService.markPurchased(id);
+            _loadItems();
+          },
+          onDelete: (id) async {
+            await ApiService.deleteShoppingItem(id);
+            _loadItems();
+          },
+        ),
+      ),
     );
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    }
   }
 
   @override
@@ -106,16 +108,9 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
       appBar: AppBar(
         title: const Row(
           children: [
-            const Icon(
-              Iconsax.shopping_cart,
-              color: Color(0xFF4A90D9),
-              size: 24,
-            ),
+            Icon(Iconsax.shopping_cart, color: Color(0xFF4A90D9), size: 24),
             SizedBox(width: 8),
-            Text(
-              '장보기 목록',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-            ),
+            Text('장보기 목록', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
           ],
         ),
         backgroundColor: Colors.white,
@@ -124,81 +119,54 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
           if (_items.isNotEmpty)
             TextButton(
               onPressed: _deleteAll,
-              child: const Text(
-                '전체삭제',
-                style: TextStyle(color: Colors.red, fontSize: 13),
-              ),
+              child: const Text('전체삭제', style: TextStyle(color: Colors.red, fontSize: 13)),
             ),
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Color(0xFF4A90D9)),
-            onPressed: _loadItems,
-          ),
+          IconButton(icon: const Icon(Icons.refresh, color: Color(0xFF4A90D9)), onPressed: _loadItems),
         ],
       ),
       body: Column(
         children: [
-          // 입력창
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: TextField(
-                        controller: _nameController,
-                        decoration: const InputDecoration(
-                          labelText: '재료 이름',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(
-                            Icons.shopping_basket,
-                            color: Color(0xFF4A90D9),
-                          ),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                        ),
-                      ),
+                Expanded(
+                  flex: 3,
+                  child: TextField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      labelText: '재료 이름',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.shopping_basket, color: Color(0xFF4A90D9)),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: _quantityController,
-                        decoration: const InputDecoration(
-                          labelText: '수량/무게',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                        ),
-                      ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _quantityController,
+                    decoration: const InputDecoration(
+                      labelText: '수량/무게',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: _addItem,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4A90D9),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 16,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text('추가'),
-                    ),
-                  ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: _addItem,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4A90D9),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text('추가'),
                 ),
               ],
             ),
           ),
-
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -207,39 +175,20 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                     child: Column(
                       children: [
                         const SizedBox(height: 40),
-                        const Icon(
-                          Iconsax.shopping_cart,
-                          color: Colors.grey,
-                          size: 80,
-                        ),
+                        const Icon(Iconsax.shopping_cart, color: Colors.grey, size: 80),
                         const SizedBox(height: 16),
-                        const Text(
-                          '장보기 목록이 비어있어요!',
-                          style: TextStyle(fontSize: 18, color: Colors.grey),
-                        ),
+                        const Text('장보기 목록이 비어있어요!', style: TextStyle(fontSize: 18, color: Colors.grey)),
                         const SizedBox(height: 40),
-                        // 메모 섹션
-                        const SizedBox(height: 16),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
+                              const Row(
                                 children: [
-                                  const Icon(
-                                    Iconsax.note,
-                                    color: Color(0xFF4A90D9),
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Text(
-                                    '메모',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                                  Icon(Iconsax.note, color: Color(0xFF4A90D9), size: 20),
+                                  SizedBox(width: 8),
+                                  Text('메모', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                                 ],
                               ),
                               const SizedBox(height: 8),
@@ -247,11 +196,8 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                                 controller: _memoController,
                                 maxLines: 4,
                                 decoration: InputDecoration(
-                                  hintText:
-                                      '장보기 메모를 자유롭게 적어보세요!\n예) 마트 가는 날: 토요일, 예산: 5만원',
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
+                                  hintText: '장보기 메모를 자유롭게 적어보세요!\n예) 마트 가는 날: 토요일, 예산: 5만원',
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                   filled: true,
                                   fillColor: Colors.grey.shade50,
                                 ),
@@ -264,9 +210,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF4A90D9),
                                     foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   ),
                                   child: const Text('메모 저장'),
                                 ),
@@ -280,7 +224,6 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                 : SingleChildScrollView(
                     child: Column(
                       children: [
-                        // 쿠팡 안내
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: Container(
@@ -288,9 +231,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                             decoration: BoxDecoration(
                               color: const Color(0xFFFFF8E1),
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: const Color(0xFFFFCC02).withOpacity(0.5),
-                              ),
+                              border: Border.all(color: const Color(0xFFFFCC02).withOpacity(0.5)),
                             ),
                             child: const Row(
                               children: [
@@ -298,11 +239,8 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                                 SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
-                                    '재료 옆 쿠팡 버튼을 누르면 쿠팡에서 바로 구매할 수 있어요!',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Color(0xFF856404),
-                                    ),
+                                    '재료 옆 쿠팡 버튼을 누르면 목록 보면서 쿠팡을 이용할 수 있어요!',
+                                    style: TextStyle(fontSize: 12, color: Color(0xFF856404)),
                                   ),
                                 ),
                               ],
@@ -310,8 +248,6 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-
-                        // 쇼핑 목록
                         ListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
@@ -322,64 +258,39 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                             return Card(
                               margin: const EdgeInsets.only(bottom: 8),
                               color: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                               child: ListTile(
                                 leading: IconButton(
-                                  icon: const Icon(
-                                    Icons.check_circle_outline,
-                                    color: Color(0xFF4A90D9),
-                                  ),
+                                  icon: const Icon(Icons.check_circle_outline, color: Color(0xFF4A90D9)),
                                   onPressed: () async {
                                     await ApiService.markPurchased(item['id']);
                                     _loadItems();
                                   },
                                 ),
-                                title: Text(
-                                  item['name'],
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                                title: Text(item['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
                                 subtitle: Text('${item['quantity']}'),
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    // 쿠팡 버튼
                                     GestureDetector(
-                                      onTap: () => _openCoupang(item['name']),
+                                      onTap: () => _openCoupangSplit(item['name']),
                                       child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 4,
-                                        ),
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                         decoration: BoxDecoration(
                                           color: const Color(0xFFFFCC02),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
+                                          borderRadius: BorderRadius.circular(8),
                                         ),
                                         child: const Text(
                                           '쿠팡',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF1A1A1A),
-                                          ),
+                                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A)),
                                         ),
                                       ),
                                     ),
                                     const SizedBox(width: 4),
                                     IconButton(
-                                      icon: const Icon(
-                                        Icons.delete_outline,
-                                        color: Colors.red,
-                                      ),
+                                      icon: const Icon(Icons.delete_outline, color: Colors.red),
                                       onPressed: () async {
-                                        await ApiService.deleteShoppingItem(
-                                          item['id'],
-                                        );
+                                        await ApiService.deleteShoppingItem(item['id']);
                                         _loadItems();
                                       },
                                     ),
@@ -389,29 +300,17 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                             );
                           },
                         ),
-
-                        // 메모 섹션
                         const SizedBox(height: 16),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
+                              const Row(
                                 children: [
-                                  const Icon(
-                                    Iconsax.note,
-                                    color: Color(0xFF4A90D9),
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Text(
-                                    '메모',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                                  Icon(Iconsax.note, color: Color(0xFF4A90D9), size: 20),
+                                  SizedBox(width: 8),
+                                  Text('메모', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                                 ],
                               ),
                               const SizedBox(height: 8),
@@ -419,11 +318,8 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                                 controller: _memoController,
                                 maxLines: 4,
                                 decoration: InputDecoration(
-                                  hintText:
-                                      '장보기 메모를 자유롭게 적어보세요!\n예) 마트 가는 날: 토요일, 예산: 5만원',
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
+                                  hintText: '장보기 메모를 자유롭게 적어보세요!\n예) 마트 가는 날: 토요일, 예산: 5만원',
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                   filled: true,
                                   fillColor: Colors.grey.shade50,
                                 ),
@@ -436,9 +332,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF4A90D9),
                                     foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   ),
                                   child: const Text('메모 저장'),
                                 ),
@@ -450,6 +344,161 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                       ],
                     ),
                   ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// 쿠팡 분할 화면
+class CoupangSplitScreen extends StatefulWidget {
+  final String initialItemName;
+  final List<dynamic> items;
+  final Future<void> Function(int) onMarkPurchased;
+  final Future<void> Function(int) onDelete;
+
+  const CoupangSplitScreen({
+    super.key,
+    required this.initialItemName,
+    required this.items,
+    required this.onMarkPurchased,
+    required this.onDelete,
+  });
+
+  @override
+  State<CoupangSplitScreen> createState() => _CoupangSplitScreenState();
+}
+
+class _CoupangSplitScreenState extends State<CoupangSplitScreen> {
+  late WebViewController _webViewController;
+  bool _isListExpanded = true;
+  double _listHeightRatio = 0.3; // 목록 30%, 쿠팡 70%
+
+  @override
+  void initState() {
+    super.initState();
+    final encodedName = Uri.encodeComponent(widget.initialItemName);
+    _webViewController = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..loadRequest(Uri.parse('https://www.coupang.com/np/search?q=$encodedName&channel=myfridge'));
+  }
+
+  void _searchCoupang(String itemName) {
+    final encodedName = Uri.encodeComponent(itemName);
+    _webViewController.loadRequest(
+      Uri.parse('https://www.coupang.com/np/search?q=$encodedName&channel=myfridge'),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final listHeight = _isListExpanded ? screenHeight * _listHeightRatio : 48.0;
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('쿠팡 장보기', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: Column(
+        children: [
+          // 장보기 목록 (접기/펼치기)
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            height: listHeight,
+            child: Column(
+              children: [
+                // 접기/펼치기 버튼
+                GestureDetector(
+                  onTap: () => setState(() => _isListExpanded = !_isListExpanded),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4A90D9).withOpacity(0.1),
+                      border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Iconsax.shopping_cart, color: Color(0xFF4A90D9), size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          '장보기 목록 (${widget.items.length}개)',
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4A90D9)),
+                        ),
+                        const Spacer(),
+                        Icon(
+                          _isListExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                          color: const Color(0xFF4A90D9),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // 목록
+                if (_isListExpanded)
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      itemCount: widget.items.length,
+                      itemBuilder: (context, index) {
+                        final item = widget.items[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 4),
+                          child: ListTile(
+                            dense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                            leading: IconButton(
+                              icon: const Icon(Icons.check_circle_outline, color: Color(0xFF4A90D9), size: 20),
+                              onPressed: () async {
+                                await widget.onMarkPurchased(item['id']);
+                                setState(() {});
+                              },
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                            title: Text(item['name'], style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                            subtitle: Text(item['quantity'], style: const TextStyle(fontSize: 12)),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // 이 재료로 쿠팡 검색
+                                GestureDetector(
+                                  onTap: () => _searchCoupang(item['name']),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFFCC02),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Text('검색', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
+                                  onPressed: () async {
+                                    await widget.onDelete(item['id']);
+                                    setState(() {});
+                                  },
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(minWidth: 32),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          // 쿠팡 웹뷰
+          Expanded(
+            child: WebViewWidget(controller: _webViewController),
           ),
         ],
       ),

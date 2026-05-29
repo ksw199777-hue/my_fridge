@@ -970,6 +970,25 @@ def reset_password(data: ResetPasswordRequest, db: Session = Depends(get_db)):
     del reset_tokens[data.email]
     return {"message": "비밀번호가 변경됐어요!"}
 
+
+@app.delete("/auth/me")
+def delete_account(current_user: User = Depends(require_user), db: Session = Depends(get_db)):
+    # 내가 오너인 냉장고의 재료, 쇼핑목록, 멤버 삭제
+    owned_fridges = db.query(Fridge).filter(Fridge.owner_id == current_user.id).all()
+    for fridge in owned_fridges:
+        db.query(Ingredient).filter(Ingredient.fridge_id == fridge.id).delete()
+        db.query(ShoppingItem).filter(ShoppingItem.fridge_id == fridge.id).delete()
+        db.query(FridgeMember).filter(FridgeMember.fridge_id == fridge.id).delete()
+        db.delete(fridge)
+    
+    # 내가 멤버인 냉장고에서 탈퇴
+    db.query(FridgeMember).filter(FridgeMember.user_id == current_user.id).delete()
+    
+    # 계정 삭제
+    db.delete(current_user)
+    db.commit()
+    return {"message": "계정이 삭제됐어요!"}
+
 @app.get("/recipe/search")
 def search_recipes(query: str, current_user: User = Depends(require_user)):
     client_id = os.environ.get("NAVER_CLIENT_ID")
