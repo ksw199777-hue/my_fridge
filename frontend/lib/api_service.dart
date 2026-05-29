@@ -505,6 +505,15 @@ class ApiService {
     return jsonDecode(utf8.decode(response.bodyBytes));
   }
 
+  // 계정 삭제
+  static Future<bool> deleteAccount() async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/auth/me'),
+      headers: _headers,
+    );
+    return response.statusCode == 200;
+  }
+
   // 비밀번호 재설정
   static Future<Map<String, dynamic>> resetPassword({
     required String email,

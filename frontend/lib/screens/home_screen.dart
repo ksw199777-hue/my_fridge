@@ -17,23 +17,6 @@ class _HomeScreenState extends State<HomeScreen> {
   String _selectedLocation = '전체';
   bool _isSelectionMode = false;
   Set<int> _selectedIds = {};
-
-  final List<Color> _avatarColors = [
-    const Color(0xFF4A90D9),
-    const Color(0xFF7BC67E),
-    const Color(0xFFFF8C69),
-    const Color(0xFFFFB347),
-    const Color(0xFFDDA0DD),
-    const Color(0xFF87CEEB),
-    const Color(0xFFFF6B6B),
-    const Color(0xFF98D8C8),
-  ];
-
-  Color _getAvatarColor(String name) {
-    int hash = name.codeUnits.fold(0, (prev, curr) => prev + curr);
-    return _avatarColors[hash % _avatarColors.length];
-  }
-
   String _fridgeName = '';
 
   @override
@@ -60,17 +43,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<dynamic> get _filteredIngredients {
     List<dynamic> filtered;
-
     if (_selectedLocation == '전체') {
       filtered = List.from(_ingredients);
     } else if (_selectedLocation == '만료') {
       filtered = _ingredients.where((i) => i['d_day'] < 0).toList();
     } else {
-      filtered = _ingredients
-          .where((i) => i['location'] == _selectedLocation)
-          .toList();
+      filtered = _ingredients.where((i) => i['location'] == _selectedLocation).toList();
     }
-
     filtered.sort((a, b) {
       int dDayA = a['d_day'] as int;
       int dDayB = b['d_day'] as int;
@@ -80,7 +59,6 @@ class _HomeScreenState extends State<HomeScreen> {
       if (dDayA > 3 && dDayB <= 3) return 1;
       return (b['id'] as int).compareTo(a['id'] as int);
     });
-
     return filtered;
   }
 
@@ -105,14 +83,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _getLocationEmoji(String location) {
     switch (location) {
-      case '냉장':
-        return '🧊';
-      case '냉동':
-        return '❄️';
-      case '실온':
-        return '🌡️';
-      default:
-        return '📦';
+      case '냉장': return '🧊';
+      case '냉동': return '❄️';
+      case '실온': return '🌡️';
+      default: return '📦';
     }
   }
 
@@ -149,9 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text('재료 삭제'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -177,19 +149,12 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('취소'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('삭제', style: TextStyle(color: Colors.red)),
-            ),
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('취소')),
+            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('삭제', style: TextStyle(color: Colors.red))),
           ],
         ),
       ),
     );
-
     if (confirm == true) {
       for (final id in _selectedIds) {
         await ApiService.deleteIngredient(id, deleteHistory: deleteHistory);
@@ -206,9 +171,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final dDay = item['d_day'] as int;
     final isExpired = dDay < 0;
     final nameController = TextEditingController(text: item['name']);
-    final consumeController = TextEditingController();
     final priceController = TextEditingController(text: '${item['price']}');
     String selectedLocation = item['location'];
+    // 등록일 기준 소비기한 날짜 선택용
+    DateTime? selectedConsumeDate;
 
     showModalBottomSheet(
       context: context,
@@ -220,9 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context, setModalState) => Padding(
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom,
-            left: 16,
-            right: 16,
-            top: 16,
+            left: 16, right: 16, top: 16,
           ),
           child: SingleChildScrollView(
             child: Column(
@@ -231,8 +195,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Center(
                   child: Container(
-                    width: 40,
-                    height: 4,
+                    width: 40, height: 4,
                     decoration: BoxDecoration(
                       color: Colors.grey.shade300,
                       borderRadius: BorderRadius.circular(2),
@@ -263,28 +226,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 if (isExpired) const SizedBox(height: 12),
-                Text(
-                  item['name'],
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                Text(item['name'], style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
                 Text(
-                  item['expiry_date'] != null
-                      ? '유통기한: ${item['expiry_date']} / 소비기한: ${item['consume_date']}'
-                      : '소비기한: ${item['consume_date']}',
+                  '소비기한: ${item['consume_date']}',
                   style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                 ),
                 const SizedBox(height: 16),
                 const Divider(),
                 const SizedBox(height: 8),
-                const Text(
-                  '✏️ 수정하기',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
+                const Text('✏️ 수정하기', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 12),
+                // 재료 이름
                 TextField(
                   controller: nameController,
                   decoration: const InputDecoration(
@@ -294,65 +247,119 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                TextField(
-                  controller: consumeController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: '소비기한 (오늘부터 며칠?)',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(
-                      Icons.calendar_month,
-                      color: Color(0xFFFFB347),
+                // 소비기한 달력 선택
+                GestureDetector(
+                  onTap: () async {
+                    // 등록일 파싱
+                    DateTime registeredDate;
+                    try {
+                      registeredDate = DateTime.parse(item['registered_date']);
+                    } catch (_) {
+                      registeredDate = DateTime.now();
+                    }
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: selectedConsumeDate ?? DateTime.now(),
+                      // 등록일부터 선택 가능
+                      firstDate: registeredDate,
+                      lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
+                      locale: const Locale('ko', 'KR'),
+                      helpText: '소비기한 선택 (등록일 기준)',
+                      builder: (context, child) => Theme(
+                        data: Theme.of(context).copyWith(
+                          colorScheme: const ColorScheme.light(
+                            primary: Color(0xFF4A90D9),
+                          ),
+                        ),
+                        child: child!,
+                      ),
+                    );
+                    if (picked != null) {
+                      setModalState(() => selectedConsumeDate = picked);
+                    }
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade400),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.calendar_month, color: Color(0xFFFFB347)),
+                        const SizedBox(width: 12),
+                        Text(
+                          selectedConsumeDate != null
+                              ? '소비기한: ${selectedConsumeDate!.toLocal().toString().split(' ')[0]}'
+                              : '소비기한 날짜 선택 (탭하세요)',
+                          style: TextStyle(
+                            color: selectedConsumeDate != null ? Colors.black87 : Colors.grey,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
                 const SizedBox(height: 10),
+                // 가격
                 TextField(
                   controller: priceController,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
                     labelText: '가격 (원)',
                     border: OutlineInputBorder(),
-                    prefixIcon: Icon(
-                      Icons.attach_money,
-                      color: Color(0xFFFF6B6B),
-                    ),
+                    prefixIcon: Icon(Icons.attach_money, color: Color(0xFFFF6B6B)),
                   ),
                 ),
                 const SizedBox(height: 10),
+                // 보관 위치
                 DropdownButtonFormField<String>(
                   value: selectedLocation,
                   decoration: const InputDecoration(
                     labelText: '보관 위치',
                     border: OutlineInputBorder(),
-                    prefixIcon: Icon(
-                      Icons.location_on,
-                      color: Color(0xFFDDA0DD),
-                    ),
+                    prefixIcon: Icon(Icons.location_on, color: Color(0xFFDDA0DD)),
                   ),
                   items: ['냉장', '냉동', '실온']
-                      .map(
-                        (loc) => DropdownMenuItem(value: loc, child: Text(loc)),
-                      )
+                      .map((loc) => DropdownMenuItem(value: loc, child: Text(loc)))
                       .toList(),
-                  onChanged: (val) =>
-                      setModalState(() => selectedLocation = val!),
+                  onChanged: (val) => setModalState(() => selectedLocation = val!),
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () async {
-                      // 보관방법 바뀌었으면 소비기한 AI 재계산
                       int? newConsumeDays;
-                      if (consumeController.text.isNotEmpty) {
-                        newConsumeDays = int.parse(consumeController.text);
+
+                      if (selectedConsumeDate != null) {
+                        // 달력으로 선택한 경우: 등록일 기준으로 계산
+                        DateTime registeredDate;
+                        try {
+                          registeredDate = DateTime.parse(item['registered_date']);
+                        } catch (_) {
+                          registeredDate = DateTime.now();
+                        }
+                        newConsumeDays = selectedConsumeDate!.difference(registeredDate).inDays;
+                        if (newConsumeDays < 0) newConsumeDays = 0;
                       } else if (selectedLocation != item['location']) {
-                        // 보관방법 바뀌면 AI로 재계산
-                        newConsumeDays = await ApiService.calculateConsumeDays(
+                        // 보관방법만 바뀐 경우: 등록일 기준 AI 재계산
+                        final days = await ApiService.calculateConsumeDays(
                           name: item['name'],
                           storageType: selectedLocation,
                         );
+                        // 등록일부터 오늘까지 지난 일수 + AI 계산 days
+                        DateTime registeredDate;
+                        try {
+                          registeredDate = DateTime.parse(item['registered_date']);
+                        } catch (_) {
+                          registeredDate = DateTime.now();
+                        }
+                        final daysSinceRegistered = DateTime.now().difference(registeredDate).inDays;
+                        newConsumeDays = days - daysSinceRegistered;
+                        if (newConsumeDays < 1) newConsumeDays = 1;
                       }
 
                       await ApiService.updateIngredient(
@@ -361,7 +368,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         consumeDays: newConsumeDays,
                         price: int.tryParse(priceController.text),
                         location: selectedLocation,
-                        storageType: selectedLocation, // ← 추가
+                        storageType: selectedLocation,
                       );
                       Navigator.pop(context);
                       _loadIngredients();
@@ -370,9 +377,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       backgroundColor: const Color(0xFF4A90D9),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: const Text('수정 완료', style: TextStyle(fontSize: 16)),
                   ),
@@ -387,9 +392,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         context: context,
                         builder: (context) => StatefulBuilder(
                           builder: (context, setDialogState) => AlertDialog(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                             title: const Text('재료 삭제'),
                             content: Column(
                               mainAxisSize: MainAxisSize.min,
@@ -401,9 +404,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   subtitle: const Text('가계부 금액은 그대로 남아요'),
                                   value: false,
                                   groupValue: deleteHistory,
-                                  onChanged: (val) => setDialogState(
-                                    () => deleteHistory = val!,
-                                  ),
+                                  onChanged: (val) => setDialogState(() => deleteHistory = val!),
                                   activeColor: const Color(0xFF4A90D9),
                                 ),
                                 RadioListTile<bool>(
@@ -411,34 +412,20 @@ class _HomeScreenState extends State<HomeScreen> {
                                   subtitle: const Text('가계부에서 금액도 제거돼요'),
                                   value: true,
                                   groupValue: deleteHistory,
-                                  onChanged: (val) => setDialogState(
-                                    () => deleteHistory = val!,
-                                  ),
+                                  onChanged: (val) => setDialogState(() => deleteHistory = val!),
                                   activeColor: Colors.red,
                                 ),
                               ],
                             ),
                             actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: const Text('취소'),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: const Text(
-                                  '삭제',
-                                  style: TextStyle(color: Colors.red),
-                                ),
-                              ),
+                              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('취소')),
+                              TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('삭제', style: TextStyle(color: Colors.red))),
                             ],
                           ),
                         ),
                       );
                       if (confirm == true) {
-                        await ApiService.deleteIngredient(
-                          item['id'],
-                          deleteHistory: deleteHistory,
-                        );
+                        await ApiService.deleteIngredient(item['id'], deleteHistory: deleteHistory);
                         Navigator.pop(context);
                         _loadIngredients();
                       }
@@ -447,14 +434,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       foregroundColor: Colors.red,
                       side: const BorderSide(color: Colors.red),
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: Text(
-                      isExpired ? '🗑️ 폐기 완료 - 삭제하기' : '삭제하기',
-                      style: const TextStyle(fontSize: 16),
-                    ),
+                    child: Text(isExpired ? '🗑️ 폐기 완료 - 삭제하기' : '삭제하기', style: const TextStyle(fontSize: 16)),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -472,20 +454,8 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: _isSelectionMode
-            ? Text(
-                '${_selectedIds.length}개 선택됨',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                ),
-              )
-            : Text(
-                _fridgeName,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                ),
-              ),
+            ? Text('${_selectedIds.length}개 선택됨', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20))
+            : Text(_fridgeName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -493,51 +463,23 @@ class _HomeScreenState extends State<HomeScreen> {
             TextButton(
               onPressed: _selectAll,
               child: Text(
-                _selectedIds.length == _filteredIngredients.length
-                    ? '전체 해제'
-                    : '전체 선택',
+                _selectedIds.length == _filteredIngredients.length ? '전체 해제' : '전체 선택',
                 style: const TextStyle(color: Color(0xFF4A90D9)),
               ),
             ),
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: _selectedIds.isEmpty ? null : _deleteSelected,
-            ),
-            IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: _toggleSelectionMode,
-            ),
+            IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: _selectedIds.isEmpty ? null : _deleteSelected),
+            IconButton(icon: const Icon(Icons.close), onPressed: _toggleSelectionMode),
           ] else ...[
             IconButton(
               icon: const Icon(Icons.kitchen, color: Color(0xFF4A90D9)),
-              onPressed: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const FridgeSelectScreen(),
-                  ),
-                );
-              },
+              onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const FridgeSelectScreen())),
             ),
             IconButton(
               icon: const Icon(Icons.account_circle, color: Color(0xFF4A90D9)),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SubscriptionScreen(),
-                  ),
-                );
-              },
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionScreen())),
             ),
-            IconButton(
-              icon: const Icon(Icons.checklist, color: Color(0xFF4A90D9)),
-              onPressed: _toggleSelectionMode,
-            ),
-            IconButton(
-              icon: const Icon(Icons.refresh, color: Color(0xFF4A90D9)),
-              onPressed: _loadIngredients,
-            ),
+            IconButton(icon: const Icon(Icons.checklist, color: Color(0xFF4A90D9)), onPressed: _toggleSelectionMode),
+            IconButton(icon: const Icon(Icons.refresh, color: Color(0xFF4A90D9)), onPressed: _loadIngredients),
           ],
         ],
       ),
@@ -559,25 +501,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _SummaryItem(
-                        icon: Iconsax.box,
-                        count: _ingredients.length,
-                        label: '전체',
-                      ),
-                      _SummaryItem(
-                        icon: Iconsax.warning_2,
-                        count: _ingredients
-                            .where((i) => i['d_day'] >= 0 && i['d_day'] <= 3)
-                            .length,
-                        label: '임박',
-                        iconColor: Colors.yellow,
-                      ),
-                      _SummaryItem(
-                        icon: Iconsax.close_circle,
-                        count: _ingredients.where((i) => i['d_day'] < 0).length,
-                        label: '만료',
-                        iconColor: Colors.redAccent,
-                      ),
+                      _SummaryItem(icon: Iconsax.box, count: _ingredients.length, label: '전체'),
+                      _SummaryItem(icon: Iconsax.warning_2, count: _ingredients.where((i) => i['d_day'] >= 0 && i['d_day'] <= 3).length, label: '임박', iconColor: Colors.yellow),
+                      _SummaryItem(icon: Iconsax.close_circle, count: _ingredients.where((i) => i['d_day'] < 0).length, label: '만료', iconColor: Colors.redAccent),
                     ],
                   ),
                 ),
@@ -589,17 +515,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: GestureDetector(
-                          onTap: () =>
-                              setState(() => _selectedLocation = location),
+                          onTap: () => setState(() => _selectedLocation = location),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
-                              color: isSelected
-                                  ? const Color(0xFF4A90D9)
-                                  : Colors.grey.shade100,
+                              color: isSelected ? const Color(0xFF4A90D9) : Colors.grey.shade100,
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
@@ -623,20 +543,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(
-                                Iconsax.alarm,
-                                color: Colors.grey,
-                                size: 60,
-                              ),
+                              const Icon(Iconsax.alarm, color: Colors.grey, size: 60),
                               const SizedBox(height: 16),
-                              Text(
-                                '$_selectedLocation 재료가 없어요!',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey,
-                                ),
-                              ),
+                              Text('$_selectedLocation 재료가 없어요!', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey)),
                             ],
                           ),
                         )
@@ -648,10 +557,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             itemBuilder: (context, index) {
                               final item = _filteredIngredients[index];
                               final dDay = item['d_day'] as int;
-                              final avatarColor = _getAvatarColor(item['name']);
-                              final isSelected = _selectedIds.contains(
-                                item['id'] as int,
-                              );
+                              final isSelected = _selectedIds.contains(item['id'] as int);
                               return GestureDetector(
                                 onTap: () {
                                   if (_isSelectionMode) {
@@ -668,99 +574,53 @@ class _HomeScreenState extends State<HomeScreen> {
                                 },
                                 child: Card(
                                   margin: const EdgeInsets.only(bottom: 10),
-                                  color: isSelected
-                                      ? const Color(0xFFE3F0FF)
-                                      : _getCardColor(dDay),
+                                  color: isSelected ? const Color(0xFFE3F0FF) : _getCardColor(dDay),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
-                                    side: isSelected
-                                        ? const BorderSide(
-                                            color: Color(0xFF4A90D9),
-                                            width: 2,
-                                          )
-                                        : BorderSide.none,
+                                    side: isSelected ? const BorderSide(color: Color(0xFF4A90D9), width: 2) : BorderSide.none,
                                   ),
                                   child: ListTile(
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 8,
-                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                     leading: _isSelectionMode
                                         ? Checkbox(
                                             value: isSelected,
-                                            onChanged: (_) => _toggleSelect(
-                                              item['id'] as int,
-                                            ),
-                                            activeColor: const Color(
-                                              0xFF4A90D9,
-                                            ),
+                                            onChanged: (_) => _toggleSelect(item['id'] as int),
+                                            activeColor: const Color(0xFF4A90D9),
                                           )
-                                        : CircleAvatar(
-                                            backgroundColor: avatarColor
-                                                .withOpacity(0.2),
-                                            child: Text(
-                                              item['name'][0],
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                color: avatarColor,
-                                                fontSize: 18,
-                                              ),
-                                            ),
-                                          ),
+                                        : null, // ← 첫글자 아바타 제거
                                     title: Text(
                                       item['name'],
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 16,
+                                        fontSize: 18, // ← 글씨 키움
                                       ),
                                     ),
                                     subtitle: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         const SizedBox(height: 4),
-                                        Text(
-                                          '${_getLocationEmoji(item['location'])} ${item['location']}',
-                                        ),
+                                        Text('${_getLocationEmoji(item['location'])} ${item['location']}'),
                                         if (item['expiry_date'] != null)
-                                          Text(
-                                            '📦 유통기한: ${item['expiry_date']}',
-                                          ),
-                                        Text(
-                                          '🗓 소비기한: ${item['consume_date']}',
-                                        ),
+                                        Text('🗓 소비기한: ${item['consume_date']}'),
                                         if (item['has_expiry_label'] == 0)
                                           const Text(
                                             '⚠️ 오늘 기준 산출 (탭해서 수정 가능)',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.orange,
-                                            ),
+                                            style: TextStyle(fontSize: 11, color: Colors.orange),
                                           ),
                                         if (item['price'] > 0)
                                           Text('💰 ${item['price']}원'),
                                       ],
                                     ),
                                     trailing: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 6,
-                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                       decoration: BoxDecoration(
-                                        color: _getDdayColor(
-                                          dDay,
-                                        ).withOpacity(0.15),
+                                        color: _getDdayColor(dDay).withOpacity(0.15),
                                         borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(
-                                          color: _getDdayColor(dDay),
-                                        ),
+                                        border: Border.all(color: _getDdayColor(dDay)),
                                       ),
                                       child: Text(
                                         _getDdayText(dDay),
-                                        style: TextStyle(
-                                          color: _getDdayColor(dDay),
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                        style: TextStyle(color: _getDdayColor(dDay), fontWeight: FontWeight.bold),
                                       ),
                                     ),
                                   ),
@@ -795,18 +655,8 @@ class _SummaryItem extends StatelessWidget {
       children: [
         Icon(icon, color: iconColor, size: 28),
         const SizedBox(height: 4),
-        Text(
-          '$count',
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
-        ),
+        Text('$count', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
       ],
     );
   }
