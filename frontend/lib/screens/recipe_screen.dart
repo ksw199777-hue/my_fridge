@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import '../api_service.dart';
 import 'package:iconsax/iconsax.dart';
 
@@ -23,10 +24,15 @@ class _RecipeScreenState extends State<RecipeScreen>
   bool _isChatLoading = false;
   final ScrollController _scrollController = ScrollController();
 
+  // 네이버 검색
+  final TextEditingController _searchController = TextEditingController();
+  List<dynamic> _searchResults = [];
+  bool _isSearchLoading = false;
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -34,6 +40,7 @@ class _RecipeScreenState extends State<RecipeScreen>
     _tabController.dispose();
     _chatController.dispose();
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -52,14 +59,39 @@ class _RecipeScreenState extends State<RecipeScreen>
     });
   }
 
+  Future<void> _searchRecipes() async {
+    if (_searchController.text.isEmpty) return;
+    setState(() => _isSearchLoading = true);
+    final results = await ApiService.searchRecipes(_searchController.text);
+    setState(() {
+      _searchResults = results;
+      _isSearchLoading = false;
+    });
+  }
+
+  void _openWebView(BuildContext context, String url, String title) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => _WebViewScreen(url: url, title: title),
+      ),
+    );
+  }
+
   void _showPremiumDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('⭐ 프리미엄 기능'),
+        title: Row(
+          children: const [
+            Icon(Iconsax.star, color: Color(0xFF4A90D9), size: 20),
+            SizedBox(width: 8),
+            Text('프리미엄 기능'),
+          ],
+        ),
         content: const Text(
-          'AI 레시피 추천은 프리미엄 구독자만 사용할 수 있어요!\n\n월 3,000원으로 업그레이드하면 AI 레시피 추천, 대화형 채팅, 쇼핑 예상 가격 계산을 모두 사용할 수 있어요 😄',
+          'AI 레시피 추천은 프리미엄 구독자만 사용할 수 있어요!\n\n월 3,000원으로 업그레이드하면 AI 레시피 추천, 대화형 채팅을 모두 사용할 수 있어요 😄',
         ),
         actions: [
           TextButton(
@@ -67,9 +99,7 @@ class _RecipeScreenState extends State<RecipeScreen>
             child: const Text('닫기'),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
+            onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF4A90D9),
               foregroundColor: Colors.white,
@@ -220,18 +250,11 @@ class _RecipeScreenState extends State<RecipeScreen>
                               style: const TextStyle(fontSize: 13),
                             ),
                             const SizedBox(width: 12),
-                            const Icon(
-                              Icons.timer,
-                              size: 14,
-                              color: Colors.grey,
-                            ),
+                            const Icon(Icons.timer, size: 14, color: Colors.grey),
                             const SizedBox(width: 2),
                             Text(
                               '${recipe['cooking_time']}분',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey,
-                              ),
+                              style: const TextStyle(fontSize: 13, color: Colors.grey),
                             ),
                           ],
                         ),
@@ -239,9 +262,7 @@ class _RecipeScreenState extends State<RecipeScreen>
                     ),
                   ),
                   Icon(
-                    isExpanded
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
+                    isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                     color: const Color(0xFF4A90D9),
                   ),
                 ],
@@ -262,9 +283,12 @@ class _RecipeScreenState extends State<RecipeScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Divider(),
-                  const Text(
-                    '🛒 필요 재료',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  Row(
+                    children: const [
+                      Icon(Iconsax.shopping_cart, size: 16, color: Color(0xFF4A90D9)),
+                      SizedBox(width: 6),
+                      Text('필요 재료', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   Wrap(
@@ -273,27 +297,21 @@ class _RecipeScreenState extends State<RecipeScreen>
                     children: (recipe['ingredients_needed'] as List<dynamic>)
                         .map(
                           (i) => Chip(
-                            label: Text(
-                              i,
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                            backgroundColor: const Color(
-                              0xFFA8D8EA,
-                            ).withOpacity(0.3),
+                            label: Text(i, style: const TextStyle(fontSize: 12)),
+                            backgroundColor: const Color(0xFFA8D8EA).withOpacity(0.3),
                             padding: EdgeInsets.zero,
                           ),
                         )
                         .toList(),
                   ),
-                  if ((recipe['missing_ingredients'] as List<dynamic>)
-                      .isNotEmpty) ...[
+                  if ((recipe['missing_ingredients'] as List<dynamic>).isNotEmpty) ...[
                     const SizedBox(height: 12),
-                    const Text(
-                      '❌ 없는 재료',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.red,
-                      ),
+                    Row(
+                      children: const [
+                        Icon(Iconsax.close_circle, size: 16, color: Colors.red),
+                        SizedBox(width: 6),
+                        Text('없는 재료', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     Wrap(
@@ -302,10 +320,7 @@ class _RecipeScreenState extends State<RecipeScreen>
                       children: (recipe['missing_ingredients'] as List<dynamic>)
                           .map(
                             (i) => Chip(
-                              label: Text(
-                                i,
-                                style: const TextStyle(fontSize: 12),
-                              ),
+                              label: Text(i, style: const TextStyle(fontSize: 12)),
                               backgroundColor: Colors.red.withOpacity(0.1),
                               padding: EdgeInsets.zero,
                             ),
@@ -315,9 +330,12 @@ class _RecipeScreenState extends State<RecipeScreen>
                   ],
                   if (recipe['steps'] != null) ...[
                     const SizedBox(height: 12),
-                    const Text(
-                      '👨‍🍳 조리 방법',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                    Row(
+                      children: const [
+                        Icon(Iconsax.note_text, size: 16, color: Color(0xFF4A90D9)),
+                        SizedBox(width: 6),
+                        Text('조리 방법', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     ...(recipe['steps'] as List<dynamic>).map(
@@ -347,10 +365,7 @@ class _RecipeScreenState extends State<RecipeScreen>
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                step.toString().replaceAll(
-                                  RegExp(r'^\d+\.\s*'),
-                                  '',
-                                ),
+                                step.toString().replaceAll(RegExp(r'^\d+\.\s*'), ''),
                                 style: const TextStyle(fontSize: 14),
                               ),
                             ),
@@ -364,7 +379,7 @@ class _RecipeScreenState extends State<RecipeScreen>
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () => _openYoutube(recipe['name']),
-                      icon: const Text('▶️'),
+                      icon: const Icon(Icons.play_circle_outline),
                       label: Text('${recipe['name']} 유튜브 레시피 보기'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFFF0000),
@@ -393,10 +408,7 @@ class _RecipeScreenState extends State<RecipeScreen>
           children: [
             Icon(Iconsax.search_favorite, color: Color(0xFF4A90D9), size: 24),
             SizedBox(width: 8),
-            Text(
-              '레시피',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-            ),
+            Text('레시피', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
           ],
         ),
         backgroundColor: Colors.white,
@@ -407,6 +419,7 @@ class _RecipeScreenState extends State<RecipeScreen>
           unselectedLabelColor: Colors.grey,
           indicatorColor: const Color(0xFF4A90D9),
           tabs: const [
+            Tab(icon: Icon(Iconsax.search_normal, size: 18), text: '레시피 찾기'),
             Tab(icon: Icon(Iconsax.magic_star, size: 18), text: 'AI 자동 추천'),
             Tab(icon: Icon(Iconsax.message, size: 18), text: '대화형 추천'),
           ],
@@ -415,6 +428,116 @@ class _RecipeScreenState extends State<RecipeScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
+          // 레시피 찾기 탭
+          Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: '재료나 요리 이름으로 검색해보세요!',
+                          prefixIcon: const Icon(Iconsax.search_normal, color: Color(0xFF4A90D9)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey.shade100,
+                        ),
+                        onSubmitted: (_) => _searchRecipes(),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: _searchRecipes,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4A90D9),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('검색'),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: _isSearchLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _searchResults.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Iconsax.search_normal, color: Colors.grey, size: 60),
+                            SizedBox(height: 16),
+                            Text(
+                              '검색어를 입력하면\n블로그 레시피를 찾아드려요!',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 16, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: _searchResults.length,
+                        itemBuilder: (context, index) {
+                          final item = _searchResults[index];
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.all(12),
+                              leading: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF4A90D9).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Iconsax.note_text, color: Color(0xFF4A90D9), size: 20),
+                              ),
+                              title: Text(
+                                item['title'],
+                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    item['description'],
+                                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    item['bloggername'],
+                                    style: const TextStyle(fontSize: 11, color: Color(0xFF4A90D9)),
+                                  ),
+                                ],
+                              ),
+                              onTap: () => _openWebView(context, item['link'], item['title']),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+
           // AI 자동 추천 탭
           _isLoading
               ? const Center(child: CircularProgressIndicator())
@@ -433,15 +556,12 @@ class _RecipeScreenState extends State<RecipeScreen>
                       const SizedBox(height: 24),
                       ElevatedButton.icon(
                         onPressed: _loadRecipes,
-                        icon: const Icon(Icons.auto_awesome),
+                        icon: const Icon(Iconsax.magic_star),
                         label: const Text('AI 추천 받기'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF4A90D9),
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -454,11 +574,7 @@ class _RecipeScreenState extends State<RecipeScreen>
                   padding: const EdgeInsets.all(16),
                   itemCount: _recipes.length,
                   itemBuilder: (context, index) {
-                    return _buildRecipeCard(
-                      _recipes[index],
-                      index,
-                      _expandedIndex == index,
-                    );
+                    return _buildRecipeCard(_recipes[index], index, _expandedIndex == index);
                   },
                 ),
 
@@ -467,27 +583,21 @@ class _RecipeScreenState extends State<RecipeScreen>
             children: [
               Expanded(
                 child: _messages.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text('💬', style: TextStyle(fontSize: 60)),
+                          children: const [
+                            Icon(Iconsax.message, color: Colors.grey, size: 60),
                             SizedBox(height: 16),
                             Text(
                               '원하는 요리를 말해보세요!',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                             ),
                             SizedBox(height: 8),
                             Text(
                               '"감자랑 계란 들어가는 요리 추천해줘"\n"매운거 먹고싶어"\n"10분 안에 만들 수 있는거"',
                               textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontSize: 14,
-                              ),
+                              style: TextStyle(color: Colors.grey, fontSize: 14),
                             ),
                           ],
                         ),
@@ -512,52 +622,36 @@ class _RecipeScreenState extends State<RecipeScreen>
                           final msg = _messages[index];
                           final isUser = msg['role'] == 'user';
                           return Column(
-                            crossAxisAlignment: isUser
-                                ? CrossAxisAlignment.end
-                                : CrossAxisAlignment.start,
+                            crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                             children: [
                               Container(
                                 margin: const EdgeInsets.only(bottom: 8),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 10,
-                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                                 constraints: BoxConstraints(
-                                  maxWidth:
-                                      MediaQuery.of(context).size.width * 0.75,
+                                  maxWidth: MediaQuery.of(context).size.width * 0.75,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: isUser
-                                      ? const Color(0xFF4A90D9)
-                                      : Colors.grey.shade100,
+                                  color: isUser ? const Color(0xFF4A90D9) : Colors.grey.shade100,
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                                 child: Text(
                                   msg['content'],
-                                  style: TextStyle(
-                                    color: isUser ? Colors.white : Colors.black,
-                                  ),
+                                  style: TextStyle(color: isUser ? Colors.white : Colors.black),
                                 ),
                               ),
-                              if (!isUser &&
-                                  (msg['recipes'] as List).isNotEmpty)
-                                ...((msg['recipes'] as List<dynamic>)
-                                    .asMap()
-                                    .entries
-                                    .map(
-                                      (entry) => _buildRecipeCard(
-                                        entry.value,
-                                        1000 + index * 100 + entry.key,
-                                        _expandedIndex ==
-                                            1000 + index * 100 + entry.key,
-                                      ),
-                                    )),
+                              if (!isUser && (msg['recipes'] as List).isNotEmpty)
+                                ...((msg['recipes'] as List<dynamic>).asMap().entries.map(
+                                  (entry) => _buildRecipeCard(
+                                    entry.value,
+                                    1000 + index * 100 + entry.key,
+                                    _expandedIndex == 1000 + index * 100 + entry.key,
+                                  ),
+                                )),
                             ],
                           );
                         },
                       ),
               ),
-              // 입력창
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -577,10 +671,7 @@ class _RecipeScreenState extends State<RecipeScreen>
                           ),
                           filled: true,
                           fillColor: Colors.grey.shade100,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         ),
                         onSubmitted: (_) => _sendMessage(),
                       ),
@@ -595,11 +686,7 @@ class _RecipeScreenState extends State<RecipeScreen>
                           color: const Color(0xFF4A90D9),
                           borderRadius: BorderRadius.circular(22),
                         ),
-                        child: const Icon(
-                          Icons.send,
-                          color: Colors.white,
-                          size: 20,
-                        ),
+                        child: const Icon(Icons.send, color: Colors.white, size: 20),
                       ),
                     ),
                   ],
@@ -609,13 +696,67 @@ class _RecipeScreenState extends State<RecipeScreen>
           ),
         ],
       ),
-      floatingActionButton: _recipes.isNotEmpty && _tabController.index == 0
+      floatingActionButton: _recipes.isNotEmpty && _tabController.index == 1
           ? FloatingActionButton(
               onPressed: _loadRecipes,
               backgroundColor: const Color(0xFF4A90D9),
               child: const Icon(Icons.refresh, color: Colors.white),
             )
           : null,
+    );
+  }
+}
+
+class _WebViewScreen extends StatefulWidget {
+  final String url;
+  final String title;
+
+  const _WebViewScreen({required this.url, required this.title});
+
+  @override
+  State<_WebViewScreen> createState() => _WebViewScreenState();
+}
+
+class _WebViewScreenState extends State<_WebViewScreen> {
+  late final WebViewController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..loadRequest(Uri.parse(widget.url));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          widget.title,
+          style: const TextStyle(fontSize: 14),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Iconsax.export),
+            onPressed: () async {
+              final uri = Uri.parse(widget.url);
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+          ),
+        ],
+      ),
+      body: WebViewWidget(controller: _controller),
     );
   }
 }
