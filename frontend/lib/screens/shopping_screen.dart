@@ -14,6 +14,7 @@ class ShoppingScreen extends StatefulWidget {
 class _ShoppingScreenState extends State<ShoppingScreen> {
   List<dynamic> _items = [];
   bool _isLoading = true;
+  Set<int> _checkedIds = {};
   final _nameController = TextEditingController();
   final _quantityController = TextEditingController();
   final _memoController = TextEditingController();
@@ -45,6 +46,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     final items = await ApiService.getShoppingList();
     setState(() {
       _items = items;
+      _checkedIds.clear();
       _isLoading = false;
     });
   }
@@ -255,20 +257,35 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                           itemCount: _items.length,
                           itemBuilder: (context, index) {
                             final item = _items[index];
+                            final isChecked = _checkedIds.contains(item['id']);
                             return Card(
                               margin: const EdgeInsets.only(bottom: 8),
                               color: Colors.white,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                               child: ListTile(
-                                leading: IconButton(
-                                  icon: const Icon(Icons.check_circle_outline, color: Color(0xFF4A90D9)),
-                                  onPressed: () async {
-                                    await ApiService.markPurchased(item['id']);
-                                    _loadItems();
+                                leading: Checkbox(
+                                  value: isChecked,
+                                  onChanged: (val) async {
+                                    if (val == true) {
+                                      setState(() => _checkedIds.add(item['id']));
+                                    } else {
+                                      setState(() => _checkedIds.remove(item['id']));
+                                    }
                                   },
+                                  activeColor: const Color(0xFF4A90D9),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                                 ),
-                                title: Text(item['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                                subtitle: Text('${item['quantity']}'),
+                                title: Text(
+                                  item['name'],
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: isChecked ? Colors.grey.shade400 : Colors.black,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  '${item['quantity']}',
+                                  style: TextStyle(color: isChecked ? Colors.grey.shade300 : Colors.grey),
+                                ),
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
@@ -447,13 +464,15 @@ class _CoupangSplitScreenState extends State<CoupangSplitScreen> {
                         const Icon(Iconsax.shopping_cart, color: Color(0xFF4A90D9), size: 18),
                         const SizedBox(width: 8),
                         Text(
-                          '장보기 목록 (${widget.items.length}개)',
+                          _isListExpanded
+                              ? '목록 접기  ∧'
+                              : '목록 펼치기  ∨',
                           style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4A90D9)),
                         ),
                         const Spacer(),
-                        Icon(
-                          _isListExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                          color: const Color(0xFF4A90D9),
+                        Text(
+                          '(${widget.items.length}개)',
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
                         ),
                       ],
                     ),
