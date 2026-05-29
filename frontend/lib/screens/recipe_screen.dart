@@ -168,35 +168,7 @@ class _RecipeScreenState extends State<RecipeScreen>
     }
   }
 
-  String _getDifficultyColor(String difficulty) {
-    switch (difficulty) {
-      case '쉬움':
-        return '🟢';
-      case '보통':
-        return '🟡';
-      case '어려움':
-        return '🔴';
-      default:
-        return '⚪';
-    }
-  }
-
-  String _getRecipeEmoji(String name) {
-    if (name.contains('국') || name.contains('찌개') || name.contains('탕'))
-      return '🍲';
-    if (name.contains('볶음')) return '🥘';
-    if (name.contains('구이')) return '🍖';
-    if (name.contains('튀김')) return '🍟';
-    if (name.contains('샐러드')) return '🥗';
-    if (name.contains('밥')) return '🍚';
-    if (name.contains('면') || name.contains('파스타')) return '🍝';
-    if (name.contains('계란') || name.contains('달걀')) return '🍳';
-    if (name.contains('김치')) return '🥬';
-    return '🍽️';
-  }
-
   Widget _buildRecipeCard(dynamic recipe, int index, bool isExpanded) {
-    final emoji = _getRecipeEmoji(recipe['name']);
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       color: Colors.white,
@@ -226,8 +198,8 @@ class _RecipeScreenState extends State<RecipeScreen>
                       color: const Color(0xFFA8D8EA).withOpacity(0.3),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Center(
-                      child: Text(emoji, style: const TextStyle(fontSize: 28)),
+                    child: const Center(
+                      child: Icon(Icons.restaurant, color: Color(0xFF4A90D9), size: 28),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -245,8 +217,7 @@ class _RecipeScreenState extends State<RecipeScreen>
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            Text(
-                              '${_getDifficultyColor(recipe['difficulty'])} ${recipe['difficulty']}',
+                            Text(recipe['difficulty'].toString(),
                               style: const TextStyle(fontSize: 13),
                             ),
                             const SizedBox(width: 12),

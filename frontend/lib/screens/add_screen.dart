@@ -65,7 +65,7 @@ class _AddScreenState extends State<AddScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '${ingredients.length}개 재료가 목록에 추가됐어요! 저장 전 보관방법을 확인해주세요 😄',
+            '${ingredients.length}개 재료가 목록에 추가됐어요! 저장 전 보관방법을 확인해주세요',
           ),
         ),
       );
@@ -125,7 +125,7 @@ class _AddScreenState extends State<AddScreen> {
     if (mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('$successCount개 재료가 저장됐어요! 🎉')));
+      ).showSnackBar(SnackBar(content: Text('$successCount개 재료가 저장됐어요!')));
     }
   }
 
@@ -168,7 +168,7 @@ class _AddScreenState extends State<AddScreen> {
       });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('재료가 추가됐어요! 😄')));
+      ).showSnackBar(const SnackBar(content: Text('재료가 추가됐어요!')));
     }
   }
 
