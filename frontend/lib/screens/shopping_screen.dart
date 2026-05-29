@@ -31,7 +31,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     if (mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('메모가 저장됐어요! 📝')));
+      ).showSnackBar(const SnackBar(content: Text('메모가 저장됐어요!')));
     }
   }
 
@@ -225,7 +225,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Row(
+                              Row(
                                 children: [
                                   const Icon(
                                     Iconsax.note,
@@ -294,7 +294,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                             ),
                             child: const Row(
                               children: [
-                                Text('🛍️', style: TextStyle(fontSize: 16)),
+                                Icon(Iconsax.shopping_bag, color: Color(0xFF856404), size: 18),
                                 SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
@@ -397,12 +397,22 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                '📝 메모',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Iconsax.note,
+                                    color: Color(0xFF4A90D9),
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    '메모',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 8),
                               TextField(

@@ -157,8 +157,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     features: const [
                       '재료 인식 / 수동 등록',
                       '냉장고 관리',
+                      '레시피 검색',
                       '쇼핑 목록',
-                      '기본 통계',
+                      '가계부',
                       '냉장고 1대',
                       '혼자 사용',
                     ],
@@ -175,7 +176,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     features: const [
                       'AI 레시피 추천',
                       'AI 대화형 채팅',
-                      '쇼핑 예상 가격',
                       '냉장고 2대',
                       '2명 공유',
                       '구독자만 AI 사용 가능',
@@ -306,7 +306,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
-                                child: Text(trialUsed == 0 ? '1개월 무료로 시작하기' : '구독하기'),
+                                child: const Text('구독하기'),
                               ),
                             )
                           else
