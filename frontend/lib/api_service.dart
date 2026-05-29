@@ -522,4 +522,17 @@ class ApiService {
     );
     return jsonDecode(utf8.decode(response.bodyBytes));
   }
+
+  // 검색 함수 추가
+  static Future<List<dynamic>> searchRecipes(String query) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/recipe/search?query=${Uri.encodeComponent(query)}'),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['items'] ?? [];
+    }
+    return [];
+  }
 }

@@ -23,6 +23,8 @@ class _AddScreenState extends State<AddScreen> {
   final _priceController = TextEditingController();
   String _selectedLocation = '냉장';
   String _selectedStorageType = '냉장';
+  DateTime? _expiryDate;
+  DateTime? _consumeDate;
 
   Future<void> _pickAndRecognize(ImageSource source, String type) async {
     final XFile? image = await _picker.pickImage(source: source);
@@ -135,15 +137,22 @@ class _AddScreenState extends State<AddScreen> {
       return;
     }
 
+    // 날짜를 일수로 변환
+    int? expiryDays;
+    int consumeDays = 7;
+
+    if (_expiryDate != null) {
+      expiryDays = _expiryDate!.difference(DateTime.now()).inDays + 1;
+    }
+    if (_consumeDate != null) {
+      consumeDays = _consumeDate!.difference(DateTime.now()).inDays + 1;
+    }
+
     setState(() => _isLoading = true);
     final success = await ApiService.addIngredient(
       name: _nameController.text,
-      expiryDays: _expiryController.text.isNotEmpty
-          ? int.tryParse(_expiryController.text)
-          : null,
-      consumeDays: _consumeController.text.isNotEmpty
-          ? int.tryParse(_consumeController.text) ?? 7
-          : 7,
+      expiryDays: expiryDays,
+      consumeDays: consumeDays,
       price: int.tryParse(_priceController.text) ?? 0,
       location: _selectedLocation,
       storageType: _selectedStorageType,
@@ -152,9 +161,11 @@ class _AddScreenState extends State<AddScreen> {
 
     if (success && mounted) {
       _nameController.clear();
-      _expiryController.clear();
-      _consumeController.clear();
       _priceController.clear();
+      setState(() {
+        _expiryDate = null;
+        _consumeDate = null;
+      });
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('재료가 추가됐어요! 😄')));
@@ -430,29 +441,116 @@ class _AddScreenState extends State<AddScreen> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          TextField(
-                            controller: _expiryController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: '유통기한 (일, 없으면 비워두세요)',
-                              prefixIcon: Icon(
-                                Icons.calendar_today,
-                                color: Color(0xFF7BC67E),
+                          // 유통기한
+                          GestureDetector(
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: DateTime.now(),
+                                firstDate: DateTime.now(),
+                                lastDate: DateTime.now().add(
+                                  const Duration(days: 3650),
+                                ),
+                                builder: (context, child) {
+                                  return Theme(
+                                    data: ThemeData.light().copyWith(
+                                      colorScheme: const ColorScheme.light(
+                                        primary: Color(0xFF4A90D9),
+                                      ),
+                                    ),
+                                    child: child!,
+                                  );
+                                },
+                              );
+                              if (picked != null)
+                                setState(() => _expiryDate = picked);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 16,
                               ),
-                              border: OutlineInputBorder(),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_today,
+                                    color: Color(0xFF7BC67E),
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    _expiryDate == null
+                                        ? '유통기한 선택 (선택 안하면 AI 자동 산출)'
+                                        : '유통기한: ${_expiryDate!.year}-${_expiryDate!.month.toString().padLeft(2, '0')}-${_expiryDate!.day.toString().padLeft(2, '0')}',
+                                    style: TextStyle(
+                                      color: _expiryDate == null
+                                          ? Colors.grey
+                                          : Colors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                           const SizedBox(height: 12),
-                          TextField(
-                            controller: _consumeController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: '소비기한 (일, 모르면 비워두세요 → 자동 산출해드려요!)',
-                              prefixIcon: Icon(
-                                Icons.calendar_month,
-                                color: Color(0xFFFFB347),
+
+                          // 소비기한
+                          GestureDetector(
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: DateTime.now(),
+                                firstDate: DateTime.now(),
+                                lastDate: DateTime.now().add(
+                                  const Duration(days: 3650),
+                                ),
+                                builder: (context, child) {
+                                  return Theme(
+                                    data: ThemeData.light().copyWith(
+                                      colorScheme: const ColorScheme.light(
+                                        primary: Color(0xFF4A90D9),
+                                      ),
+                                    ),
+                                    child: child!,
+                                  );
+                                },
+                              );
+                              if (picked != null)
+                                setState(() => _consumeDate = picked);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 16,
                               ),
-                              border: OutlineInputBorder(),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_month,
+                                    color: Color(0xFFFFB347),
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    _consumeDate == null
+                                        ? '소비기한 선택 (선택 안하면 AI 자동 산출)'
+                                        : '소비기한: ${_consumeDate!.year}-${_consumeDate!.month.toString().padLeft(2, '0')}-${_consumeDate!.day.toString().padLeft(2, '0')}',
+                                    style: TextStyle(
+                                      color: _consumeDate == null
+                                          ? Colors.grey
+                                          : Colors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -464,16 +562,17 @@ class _AddScreenState extends State<AddScreen> {
                                 color: Colors.grey,
                               ),
                               SizedBox(width: 4),
-                              Text(
-                                '식품위생법 및 식약처 기준을 참고해 산출합니다',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey,
+                              Expanded(
+                                child: Text(
+                                  '날짜를 선택하지 않으면 AI가 자동 산출합니다. 식품위생법 및 식약처 기준을 참고해 산출해요.',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
                           TextField(
                             controller: _priceController,
                             keyboardType: TextInputType.number,

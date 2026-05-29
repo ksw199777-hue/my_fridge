@@ -23,6 +23,7 @@ from email.mime.multipart import MIMEMultipart
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 from app.auth import hash_password
+import requests as req
 
 load_dotenv()
 
@@ -968,3 +969,34 @@ def reset_password(data: ResetPasswordRequest, db: Session = Depends(get_db)):
     
     del reset_tokens[data.email]
     return {"message": "비밀번호가 변경됐어요!"}
+
+@app.get("/recipe/search")
+def search_recipes(query: str, current_user: User = Depends(require_user)):
+    client_id = os.environ.get("NAVER_CLIENT_ID")
+    client_secret = os.environ.get("NAVER_CLIENT_SECRET")
+    
+    url = "https://openapi.naver.com/v1/search/blog.json"
+    headers = {
+        "X-Naver-Client-Id": client_id,
+        "X-Naver-Client-Secret": client_secret,
+    }
+    params = {
+        "query": f"{query} 레시피",
+        "display": 10,
+        "sort": "sim"
+    }
+    
+    response = req.get(url, headers=headers, params=params)
+    data = response.json()
+    
+    return {
+        "items": [
+            {
+                "title": item["title"].replace("<b>", "").replace("</b>", ""),
+                "link": item["link"],
+                "description": item["description"].replace("<b>", "").replace("</b>", ""),
+                "bloggername": item["bloggername"],
+            }
+            for item in data.get("items", [])
+        ]
+    }
