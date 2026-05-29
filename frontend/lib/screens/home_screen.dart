@@ -509,32 +509,84 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
-                // 검색창
+                // 검색창 + 추천검색어
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (val) => setState(() => _searchQuery = val),
-                    decoration: InputDecoration(
-                      hintText: '재료 검색 (예: 깨, 당근...)',
-                      prefixIcon: const Icon(Iconsax.search_normal, color: Color(0xFF4A90D9)),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.close, color: Colors.grey),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() => _searchQuery = '');
-                              },
-                            )
-                          : null,
-                      filled: true,
-                      fillColor: Colors.grey.shade100,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextField(
+                        controller: _searchController,
+                        onChanged: (val) => setState(() => _searchQuery = val),
+                        decoration: InputDecoration(
+                          hintText: '재료 검색 (예: 깨, 당근...)',
+                          prefixIcon: const Icon(Iconsax.search_normal, color: Color(0xFF4A90D9)),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.close, color: Colors.grey),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() => _searchQuery = '');
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: Colors.grey.shade100,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                        ),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                    ),
+                      // 추천검색어
+                      if (_searchQuery.isNotEmpty) ...[
+                        Builder(
+                          builder: (context) {
+                            final suggestions = _ingredients
+                                .map((i) => i['name'] as String)
+                                .where((name) => name.toLowerCase().contains(_searchQuery.toLowerCase()))
+                                .toSet()
+                                .toList();
+                            if (suggestions.isEmpty) return const SizedBox.shrink();
+                            return Container(
+                              margin: const EdgeInsets.only(top: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade200),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                children: suggestions.map((name) => InkWell(
+                                  onTap: () {
+                                    _searchController.text = name;
+                                    setState(() => _searchQuery = name);
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Iconsax.search_normal_1, size: 14, color: Colors.grey),
+                                        const SizedBox(width: 10),
+                                        Text(name, style: const TextStyle(fontSize: 14)),
+                                      ],
+                                    ),
+                                  ),
+                                )).toList(),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                    ],
                   ),
                 ),
                 Padding(
