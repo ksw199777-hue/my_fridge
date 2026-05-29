@@ -48,11 +48,15 @@ class _HomeScreenState extends State<HomeScreen> {
     filtered.sort((a, b) {
       int dDayA = a['d_day'] as int;
       int dDayB = b['d_day'] as int;
+      // 1. 만료 > 임박 > 일반
       if (dDayA < 0 && dDayB >= 0) return -1;
       if (dDayA >= 0 && dDayB < 0) return 1;
       if (dDayA <= 3 && dDayB > 3) return -1;
       if (dDayA > 3 && dDayB <= 3) return 1;
-      return (b['id'] as int).compareTo(a['id'] as int);
+      // 2. 같은 그룹이면 소비기한 적게 남은 순
+      if (dDayA != dDayB) return dDayA.compareTo(dDayB);
+      // 3. 소비기한도 같으면 이름순
+      return (a['name'] as String).compareTo(b['name'] as String);
     });
     return filtered;
   }
