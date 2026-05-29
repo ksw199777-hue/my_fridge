@@ -381,6 +381,9 @@ class _CoupangSplitScreenState extends State<CoupangSplitScreen> {
     final encodedName = Uri.encodeComponent(widget.initialItemName);
     _webViewController = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(NavigationDelegate(
+        onNavigationRequest: (request) => NavigationDecision.navigate,
+      ))
       ..loadRequest(Uri.parse('https://www.coupang.com/np/search?q=$encodedName&channel=myfridge'));
   }
 
@@ -396,12 +399,30 @@ class _CoupangSplitScreenState extends State<CoupangSplitScreen> {
     final screenHeight = MediaQuery.of(context).size.height;
     final listHeight = _isListExpanded ? screenHeight * _listHeightRatio : 48.0;
 
-    return Scaffold(
+    return WillPopScope(
+      onWillPop: () async {
+        if (await _webViewController.canGoBack()) {
+          _webViewController.goBack();
+          return false; // 앱 뒤로가기 막고 웹뷰 뒤로가기
+        }
+        return true; // 웹뷰 히스토리 없으면 앱 화면으로
+      },
+      child: Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('쿠팡 장보기', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () async {
+            if (await _webViewController.canGoBack()) {
+              _webViewController.goBack();
+            } else {
+              Navigator.pop(context);
+            }
+          },
+        ),
       ),
       body: Column(
         children: [
@@ -502,6 +523,7 @@ class _CoupangSplitScreenState extends State<CoupangSplitScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 }

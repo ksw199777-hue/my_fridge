@@ -36,7 +36,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       extraMembers: planType == 'team' ? _extraMembers : 0,
     );
     setState(() => _isLoading = false);
-
     if (success && mounted) {
       await _loadUserInfo();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -47,18 +46,46 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   String _getPlanName(String type) {
     switch (type) {
-      case 'premium':
-        return '프리미엄';
-      case 'team':
-        return '팀';
-      case 'vip':
-        return 'VIP';
-      default:
-        return '무료';
+      case 'premium': return '프리미엄';
+      case 'team': return '팀';
+      case 'vip': return 'VIP';
+      default: return '무료';
     }
   }
 
   int _getTeamPrice() => 5000 + (_extraMembers * 1000);
+
+  Future<void> _deleteAccount() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('계정 삭제', style: TextStyle(color: Colors.red)),
+        content: const Text('계정을 삭제하면 모든 데이터가 영구적으로 삭제돼요.\n정말 삭제할까요?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true && mounted) {
+      final success = await ApiService.deleteAccount();
+      if (success && mounted) {
+        await ApiService.logout();
+        Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,10 +96,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text(
-          '구독 플랜',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: const Text('구독 플랜', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         elevation: 0,
       ),
@@ -89,58 +113,29 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFF4A90D9).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: const Color(0xFF4A90D9).withOpacity(0.3),
-                      ),
+                      border: Border.all(color: const Color(0xFF4A90D9).withOpacity(0.3)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          '현재 플랜',
-                          style: TextStyle(color: Colors.grey, fontSize: 13),
-                        ),
+                        const Text('현재 플랜', style: TextStyle(color: Colors.grey, fontSize: 13)),
                         const SizedBox(height: 4),
-                        Text(
-                          _getPlanName(currentPlan),
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        Text(_getPlanName(currentPlan), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                         if (expires != null) ...[
                           const SizedBox(height: 4),
-                          Text(
-                            '만료일: $expires',
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontSize: 13,
-                            ),
-                          ),
+                          Text('만료일: $expires', style: const TextStyle(color: Colors.grey, fontSize: 13)),
                         ],
                         if (trialUsed == 0) ...[
                           const SizedBox(height: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.green,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(color: Colors.green, borderRadius: BorderRadius.circular(20)),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: const [
                                 Icon(Iconsax.gift, color: Colors.white, size: 14),
                                 SizedBox(width: 4),
-                                Text(
-                                  '첫 결제 시 1개월 무료!',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                  ),
-                                ),
+                                Text('첫 결제 시 1개월 무료!', style: TextStyle(color: Colors.white, fontSize: 12)),
                               ],
                             ),
                           ),
@@ -154,15 +149,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     icon: Iconsax.slash,
                     title: '무료',
                     price: '무료',
-                    features: const [
-                      '재료 인식 / 수동 등록',
-                      '냉장고 관리',
-                      '레시피 검색',
-                      '쇼핑 목록',
-                      '가계부',
-                      '냉장고 1대',
-                      '혼자 사용',
-                    ],
+                    features: const ['재료 인식 / 수동 등록', '냉장고 관리', '레시피 검색', '쇼핑 목록', '가계부', '냉장고 1대', '혼자 사용'],
                     isCurrentPlan: currentPlan == 'free',
                     color: Colors.grey,
                     onTap: currentPlan != 'free' ? () => _subscribe('free') : null,
@@ -173,13 +160,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     icon: Iconsax.star,
                     title: '프리미엄',
                     price: '월 3,000원',
-                    features: const [
-                      'AI 레시피 추천',
-                      'AI 대화형 채팅',
-                      '냉장고 2대',
-                      '2명 공유',
-                      '구독자만 AI 사용 가능',
-                    ],
+                    features: const ['AI 레시피 추천', 'AI 대화형 채팅', '냉장고 2대', '2명 공유', '구독자만 AI 사용 가능'],
                     isCurrentPlan: currentPlan == 'premium',
                     color: const Color(0xFF4A90D9),
                     badge: trialUsed == 0 ? '1개월 무료' : null,
@@ -191,9 +172,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                       side: BorderSide(
-                        color: currentPlan == 'team'
-                            ? const Color(0xFF7BC67E)
-                            : Colors.grey.withOpacity(0.3),
+                        color: currentPlan == 'team' ? const Color(0xFF7BC67E) : Colors.grey.withOpacity(0.3),
                         width: currentPlan == 'team' ? 2 : 1,
                       ),
                     ),
@@ -205,50 +184,24 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Row(
-                                children: const [
-                                  Icon(Iconsax.people, color: Color(0xFF7BC67E), size: 22),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    '팀 플랜',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                              Row(children: const [
+                                Icon(Iconsax.people, color: Color(0xFF7BC67E), size: 22),
+                                SizedBox(width: 8),
+                                Text('팀 플랜', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                              ]),
+                              Row(children: [
+                                if (trialUsed == 0)
+                                  Container(
+                                    margin: const EdgeInsets.only(right: 8),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(color: Colors.green, borderRadius: BorderRadius.circular(20)),
+                                    child: const Text('1개월 무료', style: TextStyle(color: Colors.white, fontSize: 11)),
                                   ),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  if (trialUsed == 0)
-                                    Container(
-                                      margin: const EdgeInsets.only(right: 8),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.green,
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: const Text(
-                                        '1개월 무료',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                    ),
-                                  Text(
-                                    '월 ${_getTeamPrice().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}원',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF7BC67E),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                Text(
+                                  '월 ${_getTeamPrice()}원',
+                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF7BC67E)),
+                                ),
+                              ]),
                             ],
                           ),
                           const SizedBox(height: 8),
@@ -257,42 +210,25 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                           const Text('• 기본 4명 공유'),
                           const Text('• 구독자만 AI 사용 가능'),
                           const SizedBox(height: 12),
-                          Row(
-                            children: const [
-                              Text('추가 인원: ', style: TextStyle(fontWeight: FontWeight.bold)),
-                              Text('(1명당 +1,000원, 최대 2명 추가)'),
-                            ],
-                          ),
+                          Row(children: const [
+                            Text('추가 인원: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text('(1명당 +1,000원, 최대 2명 추가)'),
+                          ]),
                           const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              IconButton(
-                                onPressed: _extraMembers > 0
-                                    ? () => setState(() => _extraMembers--)
-                                    : null,
-                                icon: const Icon(Icons.remove_circle_outline),
-                                color: const Color(0xFF7BC67E),
-                              ),
-                              Text(
-                                '$_extraMembers명',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: _extraMembers < 2
-                                    ? () => setState(() => _extraMembers++)
-                                    : null,
-                                icon: const Icon(Icons.add_circle_outline),
-                                color: const Color(0xFF7BC67E),
-                              ),
-                              Text(
-                                '(총 ${4 + _extraMembers}명)',
-                                style: const TextStyle(color: Colors.grey),
-                              ),
-                            ],
-                          ),
+                          Row(children: [
+                            IconButton(
+                              onPressed: _extraMembers > 0 ? () => setState(() => _extraMembers--) : null,
+                              icon: const Icon(Icons.remove_circle_outline),
+                              color: const Color(0xFF7BC67E),
+                            ),
+                            Text('$_extraMembers명', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            IconButton(
+                              onPressed: _extraMembers < 2 ? () => setState(() => _extraMembers++) : null,
+                              icon: const Icon(Icons.add_circle_outline),
+                              color: const Color(0xFF7BC67E),
+                            ),
+                            Text('(총 ${4 + _extraMembers}명)', style: const TextStyle(color: Colors.grey)),
+                          ]),
                           const SizedBox(height: 12),
                           if (currentPlan != 'team')
                             SizedBox(
@@ -302,9 +238,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF7BC67E),
                                   foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 ),
                                 child: const Text('구독하기'),
                               ),
@@ -317,15 +251,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                 color: const Color(0xFF7BC67E).withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: const Center(
-                                child: Text(
-                                  '현재 이용 중',
-                                  style: TextStyle(
-                                    color: Color(0xFF7BC67E),
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
+                              child: const Center(child: Text('현재 이용 중', style: TextStyle(color: Color(0xFF7BC67E), fontWeight: FontWeight.bold))),
                             ),
                         ],
                       ),
@@ -337,12 +263,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     icon: Iconsax.crown,
                     title: 'VIP',
                     price: '월 15,000원',
-                    features: const [
-                      '모든 기능 사용 가능',
-                      '냉장고 무제한',
-                      '공유 인원 무제한',
-                      '멤버 전원 AI 사용 가능',
-                    ],
+                    features: const ['모든 기능 사용 가능', '냉장고 무제한', '공유 인원 무제한', '멤버 전원 AI 사용 가능'],
                     isCurrentPlan: currentPlan == 'vip',
                     color: const Color(0xFFFFB347),
                     badge: trialUsed == 0 ? '1개월 무료' : null,
@@ -350,6 +271,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   ),
                   const SizedBox(height: 24),
 
+                  // 안내
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -359,19 +281,27 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: const [
-                            Icon(Iconsax.info_circle, color: Color(0xFF4A90D9), size: 18),
-                            SizedBox(width: 6),
-                            Text('안내', style: TextStyle(fontWeight: FontWeight.bold)),
-                          ],
-                        ),
+                        Row(children: const [
+                          Icon(Iconsax.info_circle, color: Color(0xFF4A90D9), size: 18),
+                          SizedBox(width: 6),
+                          Text('안내', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ]),
                         const SizedBox(height: 8),
                         const Text('• 첫 결제 시 1개월 무료 체험 제공', style: TextStyle(fontSize: 13)),
                         const Text('• 구독은 언제든지 변경/해지 가능', style: TextStyle(fontSize: 13)),
                       ],
                     ),
                   ),
+                  const SizedBox(height: 16),
+
+                  // 계정 삭제
+                  Center(
+                    child: TextButton(
+                      onPressed: _deleteAccount,
+                      child: const Text('계정 삭제', style: TextStyle(color: Colors.red, fontSize: 13)),
+                    ),
+                  ),
+                  const SizedBox(height: 40), // 하단 네비게이션 바 여백
                 ],
               ),
             ),
@@ -418,50 +348,21 @@ class _PlanCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Icon(icon, color: color, size: 22),
-                    const SizedBox(width: 8),
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                Row(children: [
+                  Icon(icon, color: color, size: 22),
+                  const SizedBox(width: 8),
+                  Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ]),
+                Row(children: [
+                  if (badge != null)
+                    Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(color: Colors.green, borderRadius: BorderRadius.circular(20)),
+                      child: Text(badge!, style: const TextStyle(color: Colors.white, fontSize: 11)),
                     ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    if (badge != null)
-                      Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          badge!,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ),
-                    Text(
-                      price,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: color,
-                      ),
-                    ),
-                  ],
-                ),
+                  Text(price, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: color)),
+                ]),
               ],
             ),
             const SizedBox(height: 8),
@@ -475,9 +376,7 @@ class _PlanCard extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: color,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   child: const Text('구독하기'),
                 ),
@@ -490,12 +389,7 @@ class _PlanCard extends StatelessWidget {
                   color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Center(
-                  child: Text(
-                    '현재 이용 중',
-                    style: TextStyle(color: color, fontWeight: FontWeight.bold),
-                  ),
-                ),
+                child: Center(child: Text('현재 이용 중', style: TextStyle(color: color, fontWeight: FontWeight.bold))),
               ),
           ],
         ),
