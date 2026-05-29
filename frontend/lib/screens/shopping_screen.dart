@@ -1,6 +1,5 @@
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 import '../api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iconsax/iconsax.dart';
@@ -84,31 +83,19 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     }
   }
 
-  void _openCoupangSplit(String itemName) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => CoupangSplitScreen(
-          initialItemName: itemName,
-          partnerUrl: 'https://link.coupang.com/a/d80FY5XY8O',
-          items: _items,
-          checkedIds: _checkedIds,
-          onToggleCheck: (id, checked) {
-            setState(() {
-              if (checked) {
-                _checkedIds.add(id);
-              } else {
-                _checkedIds.remove(id);
-              }
-            });
-          },
-          onDelete: (id) async {
-            await ApiService.deleteShoppingItem(id);
-            _loadItems();
-          },
-        ),
-      ),
-    );
+  Future<void> _openCoupang() async {
+    const partnerUrl = 'https://link.coupang.com/a/d80FY5XY8O';
+    try {
+      await launchUrl(
+        Uri.parse(partnerUrl),
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (_) {
+      await launchUrl(
+        Uri.parse(partnerUrl),
+        mode: LaunchMode.platformDefault,
+      );
+    }
   }
 
   @override
@@ -278,7 +265,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         GestureDetector(
-                          onTap: () => _openCoupangSplit(item['name']),
+                          onTap: _openCoupang,
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
@@ -352,235 +339,6 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// 쿠팡 분할 화면
-class CoupangSplitScreen extends StatefulWidget {
-  final String initialItemName;
-  final String partnerUrl;
-  final List<dynamic> items;
-  final Set<int> checkedIds;
-  final void Function(int, bool) onToggleCheck;
-  final Future<void> Function(int) onDelete;
-
-  const CoupangSplitScreen({
-    super.key,
-    required this.initialItemName,
-    required this.partnerUrl,
-    required this.items,
-    required this.checkedIds,
-    required this.onToggleCheck,
-    required this.onDelete,
-  });
-
-  @override
-  State<CoupangSplitScreen> createState() => _CoupangSplitScreenState();
-}
-
-class _CoupangSplitScreenState extends State<CoupangSplitScreen> {
-  late WebViewController _webViewController;
-  bool _isListExpanded = true;
-  late Set<int> _localCheckedIds;
-
-  @override
-  void initState() {
-    super.initState();
-    _localCheckedIds = Set.from(widget.checkedIds);
-    _webViewController = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(NavigationDelegate(
-        onNavigationRequest: (request) async {
-          if (request.url.startsWith('coupang://')) {
-            try {
-              await launchUrl(
-                Uri.parse(request.url),
-                mode: LaunchMode.externalApplication,
-              );
-            } catch (_) {
-              await launchUrl(
-                Uri.parse('https://www.coupang.com/np/categories/393760'),
-                mode: LaunchMode.externalApplication,
-              );
-            }
-            return NavigationDecision.prevent;
-          }
-          return NavigationDecision.navigate;
-        },
-      ))
-      ..loadRequest(Uri.parse(widget.partnerUrl));
-  }
-
-  void _searchCoupang(String itemName) {
-    // 파트너스 링크로 재진입 후 검색
-    _webViewController.loadRequest(
-      Uri.parse(widget.partnerUrl),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final listHeight = _isListExpanded ? screenHeight * 0.3 : 48.0;
-
-    return WillPopScope(
-      onWillPop: () async {
-        if (await _webViewController.canGoBack()) {
-          _webViewController.goBack();
-          return false;
-        }
-        return true;
-      },
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(
-          title: const Text('쿠팡 장보기', style: TextStyle(fontWeight: FontWeight.bold)),
-          backgroundColor: Colors.white,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () async {
-              if (await _webViewController.canGoBack()) {
-                _webViewController.goBack();
-              } else {
-                Navigator.pop(context);
-              }
-            },
-          ),
-        ),
-        body: Column(
-          children: [
-            // 장보기 목록 (접기/펼치기)
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              height: listHeight,
-              child: Column(
-                children: [
-                  // 접기/펼치기 버튼
-                  GestureDetector(
-                    onTap: () => setState(() => _isListExpanded = !_isListExpanded),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF4A90D9).withOpacity(0.1),
-                        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Iconsax.shopping_cart, color: Color(0xFF4A90D9), size: 18),
-                          const SizedBox(width: 8),
-                          Text(
-                            _isListExpanded ? '목록 접기  ∧' : '목록 펼치기  ∨',
-                            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4A90D9)),
-                          ),
-                          const Spacer(),
-                          Text(
-                            '(${widget.items.length}개)',
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // 목록
-                  if (_isListExpanded)
-                    Expanded(
-                      child: Column(
-                        children: [
-                          Expanded(
-                            child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        itemCount: widget.items.length,
-                        itemBuilder: (context, index) {
-                          final item = widget.items[index];
-                          final isChecked = _localCheckedIds.contains(item['id']);
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 4),
-                            child: ListTile(
-                              dense: true,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                              leading: Checkbox(
-                                value: isChecked,
-                                onChanged: (val) {
-                                  final checked = val ?? false;
-                                  setState(() {
-                                    if (checked) {
-                                      _localCheckedIds.add(item['id']);
-                                    } else {
-                                      _localCheckedIds.remove(item['id']);
-                                    }
-                                  });
-                                  widget.onToggleCheck(item['id'], checked);
-                                },
-                                activeColor: const Color(0xFF4A90D9),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              title: Text(
-                                item['name'],
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: isChecked ? Colors.grey.shade400 : Colors.black,
-                                ),
-                              ),
-                              subtitle: Text(
-                                item['quantity'],
-                                style: TextStyle(fontSize: 12, color: isChecked ? Colors.grey.shade300 : Colors.grey),
-                              ),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  GestureDetector(
-                                    onTap: () => _searchCoupang(item['name']),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFFFCC02),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: const Text('검색', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
-                                    onPressed: () async {
-                                      await widget.onDelete(item['id']);
-                                      setState(() {});
-                                    },
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(minWidth: 32),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                          ),
-                          ),
-                          // 파트너스 문구
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                            child: Text(
-                              '※ 이 앱은 쿠팡 파트너스 활동의 일환으로 수수료를 제공받을 수 있습니다.',
-                              style: TextStyle(fontSize: 10, color: Colors.grey.shade400),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            // 쿠팡 웹뷰
-            Expanded(
-              child: WebViewWidget(controller: _webViewController),
-            ),
-          ],
-        ),
       ),
     );
   }
