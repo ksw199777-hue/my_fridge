@@ -1,3 +1,4 @@
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../api_service.dart';
@@ -391,7 +392,23 @@ class _CoupangSplitScreenState extends State<CoupangSplitScreen> {
     _webViewController = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(NavigationDelegate(
-        onNavigationRequest: (request) => NavigationDecision.navigate,
+        onNavigationRequest: (request) async {
+          if (request.url.startsWith('coupang://')) {
+            try {
+              await launchUrl(
+                Uri.parse(request.url),
+                mode: LaunchMode.externalApplication,
+              );
+            } catch (_) {
+              await launchUrl(
+                Uri.parse('https://www.coupang.com/np/categories/393760'),
+                mode: LaunchMode.externalApplication,
+              );
+            }
+            return NavigationDecision.prevent;
+          }
+          return NavigationDecision.navigate;
+        },
       ))
       ..loadRequest(Uri.parse(widget.partnerUrl));
   }
