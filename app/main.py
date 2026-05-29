@@ -355,6 +355,20 @@ def create_ingredient(item: IngredientCreate, fridge_id: int, current_user: User
         except Exception:
             defaults = {"냉장": 7, "냉동": 90, "실온": 3}
             consume_days = defaults.get(item.storage_type, 7)
+            
+     # 같은 이름 재료 중복 체크 후 숫자 붙이기
+    existing = db.query(Ingredient).filter(
+        Ingredient.fridge_id == fridge_id,
+        Ingredient.name.like(f"{item.name}%")
+        ).all()
+
+    if existing:
+        existing_names = [i.name for i in existing]
+        if item.name in existing_names:
+            counter = 2
+            while f"{item.name}{counter}" in existing_names:
+                counter += 1
+            item.name = f"{item.name}{counter}"
     
     ingredient = Ingredient(
         name=item.name,
